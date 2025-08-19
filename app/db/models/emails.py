@@ -1,20 +1,18 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, String, DateTime, Text, Boolean, Integer
 from sqlalchemy.orm import relationship
 from app.db.base import Base
 from datetime import datetime
 
 class Email(Base):
-    __tablename__ = "emails"
+    __tablename__ = "email"
     
-    id = Column(Integer, primary_key=True, index=True)
-    email_id = Column(String, unique=True, index=True)
-    thread_id = Column(Integer, ForeignKey("threads.id"))
-    subject = Column(String)
-    sender = Column(String)
-    recipients = Column(String)
-    content = Column(Text)
-    received_at = Column(DateTime)
+    id = Column(Integer, primary_key=True)
+    email_identifier = Column(Text, nullable=False)
+    is_inbound = Column(Boolean, nullable=False)
+    thread_id = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    thread = relationship("Thread", back_populates="emails")
-    predictions = relationship("EmailPrediction", back_populates="email")
+    # Relationships
+    inbound_analysis = relationship("InboundEmailAnalysis", back_populates="email", uselist=False)
+    outbound_analysis = relationship("OutboundEmailAnalysis", back_populates="email", uselist=False)
+    alerts = relationship("Alert", back_populates="email")

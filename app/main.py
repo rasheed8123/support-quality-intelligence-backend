@@ -13,7 +13,10 @@ app.add_middleware(
 )
 
 # Import and include routers here
-# from app.api import rag_routes, agent_routes, classification_routes, alert_routes, report_routes
+from routes import classification
+from routes import email
+app.include_router(classification.router)
+app.include_router(email.router)
 
 @app.get("/")
 async def root():
