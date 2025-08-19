@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, DateTime
 from app.db.base import Base
 from datetime import datetime
 
@@ -10,5 +9,3 @@ class Thread(Base):
     thread_id = Column(String, unique=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    emails = relationship("Email", back_populates="thread")
