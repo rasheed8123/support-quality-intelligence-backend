@@ -141,12 +141,23 @@ class GmailClient:
         messages: List[Dict[str, Any]] = []
         fetched_threads: Dict[str, Dict[str, Any]] = {}
         for msg_id in deduped_ids:
-            msg = (
-                self.service.users()
-                .messages()
-                .get(userId="me", id=msg_id, format="metadata", metadataHeaders=["From", "To", "Subject", "Date", "Message-Id"])  # type: ignore[arg-type]
-                .execute()
-            )
+            try:
+                msg = (
+                    self.service.users()
+                    .messages()
+                    .get(userId="me", id=msg_id, format="metadata", metadataHeaders=["From", "To", "Subject", "Date", "Message-Id"])  # type: ignore[arg-type]
+                    .execute()
+                )
+            except Exception as e:
+                # Handle 404 errors gracefully - message may have been deleted
+                if "404" in str(e) or "notFound" in str(e):
+                    print(f"Message {msg_id} not found (likely deleted), skipping...")
+                    continue
+                else:
+                    # Re-raise other errors
+                    print(f"Unexpected error fetching message {msg_id}: {e}")
+                    raise e
+            
             headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
             thread_id = msg.get("threadId")
 
@@ -156,8 +167,18 @@ class GmailClient:
                 if thread_id in fetched_threads:
                     thread_summary = fetched_threads[thread_id]
                 else:
-                    thread_summary = self.get_thread_summary(thread_id)
-                    fetched_threads[thread_id] = thread_summary
+                    try:
+                        thread_summary = self.get_thread_summary(thread_id)
+                        fetched_threads[thread_id] = thread_summary
+                    except Exception as e:
+                        # Handle 404 errors for threads as well
+                        if "404" in str(e) or "notFound" in str(e):
+                            print(f"Thread {thread_id} not found (likely deleted), skipping...")
+                            thread_summary = None
+                        else:
+                            # Re-raise other errors
+                            print(f"Unexpected error fetching thread {thread_id}: {e}")
+                            raise e
 
             messages.append(
                 {

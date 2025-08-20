@@ -11,7 +11,10 @@ from pydantic import BaseModel
 from services.email.config import load_settings
 from services.email.gmail_client import GmailClient
 from services.email.state_store import StateStore
-from app.services.agent_orchestration.classify import classify_email
+# from services.agent_orchestration.classify import classify_email
+
+from services.classification_models import classify_category, classify_priority, classify_tone, classify_issue
+
 
 router = APIRouter(prefix="/email", tags=["email"])
 
@@ -86,11 +89,15 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
     payload = _decode_pubsub_message(envelope)
     
     logger.info(f"PubSub push received for email: {payload.get('emailAddress')}, historyId: {payload.get('historyId')}")
+    print(f"PubSub push received for email: {payload.get('emailAddress')}, historyId: {payload.get('historyId')}")
     
     # Gmail push payload has emailAddress and historyId
     email_address = payload.get("emailAddress")
     history_id = payload.get("historyId")
+
+    print(f"Email address: {email_address}, History ID: {history_id}")
     if not email_address or not history_id:
+        print(f"Invalid Gmail payload: missing emailAddress or historyId")
         raise HTTPException(status_code=400, detail="Invalid Gmail payload: missing emailAddress or historyId")
 
     # Optional: verify Google-signed JWT audience for Pub/Sub Push
@@ -112,15 +119,19 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
 
     try:
         client = _get_gmail_client()
+        print(f"Fetching new messages since {last_id}, {client}")
         new_messages = client.fetch_new_messages_since(start_history_id=last_id)
+        print(f"Fetched {len(new_messages)} new messages")
     except Exception as exc:  # noqa: BLE001
         # Return 200 so Pub/Sub does not endlessly retry. The error will be logged by server.
+        print(f"Error fetching new messages: {str(exc)}")
         return {"status": "error", "detail": str(exc)}
 
     # Persist new high-watermark
     state_store.set_last_history_id(email_address, str(history_id))
 
     logger.info(f"Processing {len(new_messages)} new messages")
+    print(f"Processing {len(new_messages)} new messages")
     
     # Process each message and call classify_email
     processed_count = 0
@@ -142,26 +153,31 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
             label_ids = message.get("labelIds", [])
             # If SENT label is present, it's an outbound email, otherwise it's inbound
             is_inbound = "SENT" not in label_ids
+
             
-            # Call classify_email function
-            classify_email(
-                email_id=email_id,
-                from_email=from_email,
-                thread_id=thread_id,
-                subject=subject,
-                body=body,
-                is_inbound=is_inbound
-            )
+            
+            # Call classification function for inbound emails
+            if is_inbound:
+                result = _process_inbound_email(
+                    email_id=email_id,
+                    from_email=from_email,
+                    subject=subject,
+                    body=body
+                )
+                print(result)
+            print(email_id,from_email,thread_id,subject,body,is_inbound)
             
             processed_count += 1
             logger.info(f"Successfully processed email {email_id} (inbound: {is_inbound}, subject: {subject[:50]}...)")
+            print(f"Successfully processed email {email_id} (inbound: {is_inbound}, subject: {subject[:50]}...)")
             
         except Exception as e:
             logger.error(f"Error processing email {message.get('id', 'unknown')}: {str(e)}")
+            print(f"Error processing email {message.get('id', 'unknown')}: {str(e)}")
             continue
 
     logger.info(f"Processed {processed_count} out of {len(new_messages)} messages")
-    
+    print(f"Processed {processed_count} out of {len(new_messages)} messages")
     return {
         "received_for": email_address,
         "historyId": history_id,
@@ -191,6 +207,7 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
     email_address = payload.get("emailAddress")
     history_id = payload.get("historyId")
     if not email_address or not history_id:
+        print(f"Invalid Gmail payload: missing emailAddress or historyId")
         raise HTTPException(status_code=400, detail="Invalid Gmail payload: missing emailAddress or historyId")
 
     # Optional: verify Google-signed JWT audience for Pub/Sub Push
@@ -212,9 +229,12 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
 
     try:
         client = _get_gmail_client()
+        print(f"Fetching new messages since {last_id}, {client}")
         new_messages = client.fetch_new_messages_since(start_history_id=last_id)
+        print(f"Fetched {len(new_messages)} new messages")
     except Exception as exc:  # noqa: BLE001
         # Return 200 so Pub/Sub does not endlessly retry. The error will be logged by server.
+        print(f"Error fetching new messages: {str(exc)}")
         return {"status": "error", "detail": str(exc)}
 
     # Persist new high-watermark
@@ -283,5 +303,66 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
         "messages": new_messages,
     }
 
-
 '''
+
+
+def _process_inbound_email(email_id: str, from_email: str, subject: str, body: str):
+    """Process inbound email according to flow.md logic."""
+    try:
+        email_text = f"{subject} {body}"
+        
+        # Step 1: Spam classification
+        try:
+            spam_result = classify_category(email_text)
+            email_type = spam_result.get("category", "query")  # Default to query if classification fails
+        except Exception as e:
+            logger.error(f"Error in spam classification for email {email_id}: {e}")
+            email_type = "query"  # Default fallback
+        
+        if email_type == "spam":
+            # End processing for spam
+            logger.info(f"Email {email_id} classified as spam")
+            return
+        
+        # Step 2: Priority classification (only for non-spam)
+        try:
+            priority_result = classify_priority(email_text)
+            priority = priority_result.get("priority", "medium")  # Default to medium
+        except Exception as e:
+            logger.error(f"Error in priority classification for email {email_id}: {e}")
+            priority = "medium"  # Default fallback
+        
+        # Step 3: Issue classification for category
+        try:
+            issue_result = classify_issue(email_text)
+            category = issue_result if issue_result else "others"  # Use issue classification directly
+        except Exception as e:
+            logger.error(f"Error in issue classification for email {email_id}: {e}")
+            category = "general information"  # Default fallback
+        
+        # Create inbound analysis record
+        # inbound_analysis = InboundEmailAnalysis(
+        #     email_id=email_id,
+        #     from_email=from_email,
+        #     type=email_type,
+        #     priority=priority,
+        #     category=category,
+        #     responded=False,
+        #     created_at=datetime.utcnow()
+        # )
+        return (
+            email_id,
+            from_email,
+            email_type,
+            priority,
+            category,
+            False,
+        )
+        
+        # db.add(inbound_analysis)
+        logger.info(f"Inbound email {email_id} classified as {email_type}, priority: {priority}, category: {category}")
+        
+    except Exception as e:
+        logger.error(f"Error processing inbound email {email_id}: {e}")
+        print(f"Error processing inbound email {email_id}: {e}")
+

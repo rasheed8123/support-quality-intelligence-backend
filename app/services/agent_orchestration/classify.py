@@ -1,7 +1,7 @@
-from app.services.classification_models import classify_category, classify_priority, classify_tone, classify_issue
-from app.db.models.emails import Email
-from app.db.models.email_analysis import InboundEmailAnalysis, OutboundEmailAnalysis
-from app.db.session import SessionLocal
+from services.classification_models import classify_category, classify_priority, classify_tone, classify_issue
+from db.models.emails import Email
+from db.models.email_analysis import InboundEmailAnalysis, OutboundEmailAnalysis
+from db.session import SessionLocal
 from datetime import datetime
 import logging
 

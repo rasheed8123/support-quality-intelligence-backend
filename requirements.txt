@@ -9,3 +9,4 @@ cachetools
 sqlalchemy
 joblib
 langgraph
+requests
