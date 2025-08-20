@@ -19,7 +19,7 @@ class Settings(BaseModel):
     pubsub_audience: Optional[str] = os.getenv("PUBSUB_AUDIENCE")
 
     # Gmail Watch setup
-    gmail_topic_name: Optional[str] = os.getenv("GMAIL_TOPIC_NAME", "projects/misogi-461317/topics/emai-analysis")
+    gmail_topic_name: Optional[str] = os.getenv("GMAIL_TOPIC_NAME", "projects/email-analyser-agent/topics/email-classifier")
     gmail_label_ids: List[str] = [s.strip() for s in os.getenv("GMAIL_LABEL_IDS", "INBOX,SENT").split(",") if s.strip()]
     gmail_label_filter_action: Optional[str] = os.getenv("GMAIL_LABEL_FILTER_ACTION")  # include or exclude
 
