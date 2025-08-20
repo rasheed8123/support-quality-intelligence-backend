@@ -1,6 +1,5 @@
-from sqlalchemy import Column, String, DateTime, Text, Integer
-from sqlalchemy.dialects.postgresql import JSONB
-from app.db.base import Base
+from sqlalchemy import Column, String, DateTime, Text, Integer, JSON
+from db.base import Base
 from datetime import datetime
 
 class AuditLog(Base):
@@ -8,5 +7,5 @@ class AuditLog(Base):
     
     log_id = Column(Integer, primary_key=True)
     event_type = Column(Text)
-    payload = Column(JSONB)
+    payload = Column(JSON)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

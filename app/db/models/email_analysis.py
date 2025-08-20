@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, DateTime, ForeignKey, Float, Boolean, Text, Integer
 from sqlalchemy.orm import relationship
-from app.db.base import Base
+from db.base import Base
 from datetime import datetime
 
 class InboundEmailAnalysis(Base):

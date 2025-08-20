@@ -1,6 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from db.base import Base
+from db.session import engine
+from db.models import *
+
+
+
 app = FastAPI(title="Support Quality Intelligence API")
 
 # Configure CORS
@@ -21,3 +27,7 @@ app.include_router(email.router)
 @app.get("/")
 async def root():
     return {"message": "Support Quality Intelligence API"}
+
+@app.on_event("startup")
+async def startup_event():
+    Base.metadata.create_all(bind=engine)

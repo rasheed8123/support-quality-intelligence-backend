@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, Date, Float
-from app.db.base import Base
+from db.base import Base
 
 class DailyReport(Base):
     __tablename__ = "daily_reports"
