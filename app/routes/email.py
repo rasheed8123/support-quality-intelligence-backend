@@ -137,20 +137,37 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
             thread = message.get("thread", {})
             latest_message = thread.get("latest", {})
             body = latest_message.get("bodyText", "") or latest_message.get("snippet", "")
-            
+
+            # Extract thread context for outbound emails
+            thread_context = None
+            if thread and thread.get("messages"):
+                # Build thread context from all messages in the thread
+                thread_messages = []
+                for msg in thread.get("messages", []):
+                    msg_headers = msg.get("headers", {})
+                    msg_from = msg_headers.get("From", "")
+                    msg_subject = msg_headers.get("Subject", "")
+                    msg_body = msg.get("bodyText", "") or msg.get("snippet", "")
+                    msg_date = msg_headers.get("Date", "")
+
+                    thread_messages.append(f"From: {msg_from}\nDate: {msg_date}\nSubject: {msg_subject}\n\n{msg_body}\n\n---\n")
+
+                thread_context = "\n".join(thread_messages)
+
             # Determine if it's sent or received based on labels
             label_ids = message.get("labelIds", [])
             # If SENT label is present, it's an outbound email, otherwise it's inbound
             is_inbound = "SENT" not in label_ids
-            
-            # Call classify_email function
+
+            # Call classify_email function with thread context
             classify_email(
                 email_id=email_id,
                 from_email=from_email,
                 thread_id=thread_id,
                 subject=subject,
                 body=body,
-                is_inbound=is_inbound
+                is_inbound=is_inbound,
+                thread_context=thread_context
             )
             
             processed_count += 1
