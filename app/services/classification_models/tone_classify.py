@@ -20,22 +20,32 @@ issues = [
     "others"
 ]
 def classify_tone(email_text):
-    payload = {
-        "inputs": email_text,
-        "parameters": {"tone": tone}
-    }
-    response = requests.post(API_URL, headers=headers, json=payload)
-    response.raise_for_status()
-    result = response.json()
-    return result['labels'][0]
+    """Classify the tone of an email using HuggingFace API"""
+    try:
+        payload = {
+            "inputs": email_text,
+            "parameters": {"candidate_labels": tone}
+        }
+        response = requests.post(API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        return result['labels'][0] if 'labels' in result else "neutral"
+    except Exception as e:
+        print(f"Error in tone classification: {e}")
+        return "neutral"
 
 
 def classify_issue(email_text):
-    payload = {
-        "inputs": email_text,
-        "parameters": {"issues": issues}
-    }
-    response = requests.post(API_URL, headers=headers, json=payload)
-    response.raise_for_status()
-    result = response.json()
-    return result['labels'][0]
+    """Classify the issue type of an email using HuggingFace API"""
+    try:
+        payload = {
+            "inputs": email_text,
+            "parameters": {"candidate_labels": issues}
+        }
+        response = requests.post(API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        result = response.json()
+        return result['labels'][0] if 'labels' in result else "general information"
+    except Exception as e:
+        print(f"Error in issue classification: {e}")
+        return "general information"
