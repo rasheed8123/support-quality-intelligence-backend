@@ -149,10 +149,15 @@ async def _extract_thread_context(thread_context: str, subject: str, body: str) 
     """
     Extract customer query and conversation context from email thread.
 
+    IMPORTANT: For outbound email verification:
+    - Customer Query: The second-to-last message (customer's question we're responding to)
+    - Support Response: The last message (our response being verified - passed as 'body')
+    - Context: All messages before the customer query
+
     Args:
         thread_context: Full email thread context
         subject: Email subject
-        body: Current email body (support response)
+        body: Current email body (support response - chronologically last)
 
     Returns:
         Tuple of (customer_query, conversation_context)
@@ -165,23 +170,33 @@ async def _extract_thread_context(thread_context: str, subject: str, body: str) 
             logger.info("No thread context provided, using subject as customer query")
             return customer_query, conversation_context
 
-        # Parse thread to extract the last customer message as query
-        # and previous messages as context
-        emails_in_thread = _parse_email_thread(thread_context)
+        # Parse thread and sort chronologically
+        emails_in_thread = _parse_email_thread_chronologically(thread_context)
 
         if len(emails_in_thread) >= 2:
-            # Last email should be customer query (the one we're responding to)
-            customer_query = emails_in_thread[-1].get('body', subject)
+            # CORRECTED LOGIC:
+            # Second-to-last email is the customer query (what we're responding to)
+            customer_query = emails_in_thread[-2].get('body', subject)
 
-            # Previous emails as conversation context
-            context_messages = emails_in_thread[:-1]
+            # All messages before the customer query as context
+            context_messages = emails_in_thread[:-2]  # Exclude last 2 (our response + customer query)
             conversation_context = _format_conversation_context(context_messages)
-        else:
-            # Single email in thread
-            customer_query = emails_in_thread[0].get('body', subject) if emails_in_thread else subject
-            conversation_context = ""
 
-        logger.info(f"Extracted customer query: {customer_query[:100]}...")
+            logger.info(f"Thread has {len(emails_in_thread)} messages")
+            logger.info(f"Customer query (2nd-to-last): {customer_query[:100]}...")
+            logger.info(f"Context messages: {len(context_messages)}")
+
+        elif len(emails_in_thread) == 1:
+            # Single email in thread - use subject as query
+            customer_query = subject or "General inquiry"
+            conversation_context = ""
+            logger.info("Single email in thread, using subject as customer query")
+        else:
+            # No emails parsed, fallback to subject
+            customer_query = subject or "General inquiry"
+            conversation_context = ""
+            logger.warning("No emails parsed from thread context")
+
         return customer_query, conversation_context
 
     except Exception as e:
@@ -190,9 +205,75 @@ async def _extract_thread_context(thread_context: str, subject: str, body: str) 
         return subject or "General inquiry", ""
 
 
-def _parse_email_thread(thread_context: str) -> list:
+def _parse_email_thread_chronologically(thread_context: str) -> list:
     """
-    Parse email thread text into individual email messages.
+    Parse email thread text into individual email messages sorted chronologically.
+
+    Args:
+        thread_context: Raw thread text with chronological message data
+
+    Returns:
+        List of email dictionaries sorted chronologically (oldest first)
+    """
+    emails = []
+
+    try:
+        # Split thread context by message separators
+        message_blocks = thread_context.split("---\n")
+
+        for i, block in enumerate(message_blocks):
+            if not block.strip():
+                continue
+
+            # Extract message components
+            lines = block.strip().split('\n')
+            msg_data = {
+                'body': '',
+                'sender': 'unknown',
+                'date': '',
+                'subject': '',
+                'order': i
+            }
+
+            # Parse header lines and body
+            body_lines = []
+            in_body = False
+
+            for line in lines:
+                line = line.strip()
+                if line.startswith('From: '):
+                    msg_data['sender'] = line[6:].strip()
+                elif line.startswith('Date: '):
+                    msg_data['date'] = line[6:].strip()
+                elif line.startswith('Subject: '):
+                    msg_data['subject'] = line[9:].strip()
+                elif line == '' and not in_body:
+                    in_body = True  # Empty line indicates start of body
+                elif in_body or (not line.startswith(('From:', 'Date:', 'Subject:'))):
+                    body_lines.append(line)
+
+            msg_data['body'] = '\n'.join(body_lines).strip()
+
+            # Only add if we have meaningful content
+            if len(msg_data['body']) > 10:
+                emails.append(msg_data)
+
+        # Sort by date if available, otherwise by order
+        emails.sort(key=lambda x: (x.get('date', ''), x.get('order', 0)))
+
+        logger.info(f"Parsed {len(emails)} messages from thread context")
+
+    except Exception as e:
+        logger.error(f"Error parsing email thread chronologically: {str(e)}")
+        # Fallback to simple parsing
+        emails = _parse_email_thread_fallback(thread_context)
+
+    return emails
+
+
+def _parse_email_thread_fallback(thread_context: str) -> list:
+    """
+    Fallback parser for email thread text when structured parsing fails.
 
     Args:
         thread_context: Raw thread text
@@ -227,16 +308,19 @@ def _parse_email_thread(thread_context: str) -> list:
                 emails.append({
                     'body': part.strip(),
                     'order': i,
-                    'sender': _extract_sender_from_text(part)
+                    'sender': _extract_sender_from_text(part),
+                    'date': ''
                 })
 
         # Sort by order (oldest first)
         emails.sort(key=lambda x: x['order'])
 
+        logger.info(f"Fallback parser extracted {len(emails)} messages")
+
     except Exception as e:
-        logger.error(f"Error parsing email thread: {str(e)}")
-        # Fallback: treat entire context as single email
-        emails = [{'body': thread_context, 'order': 0, 'sender': 'unknown'}]
+        logger.error(f"Error in fallback email thread parsing: {str(e)}")
+        # Final fallback: treat entire context as single email
+        emails = [{'body': thread_context, 'order': 0, 'sender': 'unknown', 'date': ''}]
 
     return emails
 

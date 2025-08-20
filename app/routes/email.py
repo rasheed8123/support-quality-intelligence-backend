@@ -138,21 +138,41 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
             latest_message = thread.get("latest", {})
             body = latest_message.get("bodyText", "") or latest_message.get("snippet", "")
 
-            # Extract thread context for outbound emails
+            # Extract thread context for outbound emails with chronological ordering
             thread_context = None
             if thread and thread.get("messages"):
-                # Build thread context from all messages in the thread
+                # Sort messages chronologically using internalDate
+                messages = thread.get("messages", [])
+
+                # Sort by internalDate (timestamp) to ensure chronological order
+                try:
+                    sorted_messages = sorted(messages, key=lambda m: int(m.get("internalDate", "0")))
+                except (ValueError, TypeError):
+                    # Fallback to original order if internalDate parsing fails
+                    sorted_messages = messages
+
+                # Build thread context from chronologically sorted messages
                 thread_messages = []
-                for msg in thread.get("messages", []):
+                for i, msg in enumerate(sorted_messages):
                     msg_headers = msg.get("headers", {})
                     msg_from = msg_headers.get("From", "")
                     msg_subject = msg_headers.get("Subject", "")
                     msg_body = msg.get("bodyText", "") or msg.get("snippet", "")
                     msg_date = msg_headers.get("Date", "")
+                    msg_internal_date = msg.get("internalDate", "")
 
-                    thread_messages.append(f"From: {msg_from}\nDate: {msg_date}\nSubject: {msg_subject}\n\n{msg_body}\n\n---\n")
+                    # Format message with chronological information
+                    thread_messages.append(
+                        f"From: {msg_from}\n"
+                        f"Date: {msg_date}\n"
+                        f"InternalDate: {msg_internal_date}\n"
+                        f"Subject: {msg_subject}\n"
+                        f"MessageOrder: {i+1}\n\n"
+                        f"{msg_body}\n\n---\n"
+                    )
 
                 thread_context = "\n".join(thread_messages)
+                logger.info(f"Built thread context with {len(sorted_messages)} chronologically sorted messages")
 
             # Determine if it's sent or received based on labels
             label_ids = message.get("labelIds", [])
