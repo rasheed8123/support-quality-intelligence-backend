@@ -27,6 +27,20 @@ Thumbs.db
 
 # Environment variables
 .env
+.env.local
+.env.production
+.env.staging
+
+# Credentials & Secrets (NEVER COMMIT THESE)
+# Note: Credentials are now stored in .env file (which is already ignored)
+service-account.json
+gmail_credentials.json
+client_secret.json
+*.key
+*.pem
+
+# State Files
+state.json
 
 # Log files
 *.log
