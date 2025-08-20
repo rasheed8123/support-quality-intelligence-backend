@@ -9,6 +9,9 @@ from app.config import settings
 from app.webhook.router import router as webhook_router
 from app.api.endpoints import verification_router, health_router
 
+# Import existing route modules
+from app.routes import classification, email
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -65,10 +68,15 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
-# Include routers
+# Include all routers
+# RAG System routers
 app.include_router(health_router)
 app.include_router(verification_router)
 app.include_router(webhook_router)
+
+# Existing application routers
+app.include_router(classification.router)
+app.include_router(email.router)
 
 # Root endpoint
 @app.get("/", tags=["Root"])
@@ -79,5 +87,11 @@ async def root():
         "version": settings.API_VERSION,
         "description": settings.API_DESCRIPTION,
         "docs_url": "/docs",
-        "health_check": "/health"
+        "health_check": "/health",
+        "endpoints": {
+            "rag_verification": "/api/v1/verify-support-response",
+            "classification": "/classification",
+            "email": "/email",
+            "webhooks": "/webhook"
+        }
     }

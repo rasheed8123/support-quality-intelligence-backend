@@ -1,18 +1,16 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Integer
+from sqlalchemy.orm import relationship
 from app.db.base import Base
 from datetime import datetime
-import enum
-
-class AlertType(enum.Enum):
-    SLA_BREACH = "sla_breach"
-    HIGH_PRIORITY = "high_priority"
-    NEGATIVE_TONE = "negative_tone"
 
 class Alert(Base):
     __tablename__ = "alerts"
     
-    id = Column(Integer, primary_key=True, index=True)
-    type = Column(Enum(AlertType))
-    email_id = Column(Integer, ForeignKey("emails.id"))
-    message = Column(String)
+    id = Column(Integer, primary_key=True)
+    type = Column(String(50))  # 'sla_breach', 'high_priority_pending', 'incorrect_fact', 'negative_tone'
+    email_id = Column(Text, ForeignKey("email.email_identifier", ondelete="CASCADE"))
+    description = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    email = relationship("Email", back_populates="alerts")
