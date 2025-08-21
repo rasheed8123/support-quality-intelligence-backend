@@ -46,11 +46,13 @@ async def classify_email(email_id: str, from_email: str, thread_id: str, subject
         # 🔍 DETAILED LOGGING: Database operations
         logger.info(f"   📊 Creating email record in database...")
 
-        # Create email record
+        # Create email record with subject and body
         email = Email(
             email_identifier=email_id,
             is_inbound=is_inbound,
             thread_id=thread_id,
+            subject=subject,
+            body=body,
             created_at=datetime.utcnow()
         )
         db.add(email)
@@ -61,6 +63,8 @@ async def classify_email(email_id: str, from_email: str, thread_id: str, subject
         logger.info(f"      - email_identifier: {email.email_identifier}")
         logger.info(f"      - is_inbound: {email.is_inbound}")
         logger.info(f"      - thread_id: {email.thread_id}")
+        logger.info(f"      - subject: {email.subject}")
+        logger.info(f"      - body_length: {len(email.body) if email.body else 0} characters")
         logger.info(f"      - created_at: {email.created_at}")
         
         if is_inbound:

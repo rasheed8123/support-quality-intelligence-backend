@@ -21,6 +21,8 @@ def check_database():
             print(f"   - ID: {email.email_identifier}")
             print(f"     Is Inbound: {email.is_inbound}")
             print(f"     Thread ID: {email.thread_id}")
+            print(f"     Subject: {email.subject[:50] + '...' if email.subject and len(email.subject) > 50 else email.subject}")
+            print(f"     Body Length: {len(email.body) if email.body else 0} characters")
             print(f"     Created: {email.created_at}")
             print()
         
