@@ -183,7 +183,7 @@ class SupportVerificationRequest(BaseModel):
         use_enum_values = True
         validate_assignment = True
         extra = "forbid"  # Reject unknown fields
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "support_response": "Our Data Science & AI Mastery Program costs ₹99,000 for the complete 6-month course. This includes live sessions, projects, and placement assistance with our 500+ hiring partners.",
                 "customer_query": "What is the fee structure for your Data Science course?",

@@ -12,6 +12,7 @@ import os
 from datetime import datetime
 
 from app.config import settings
+from app.core.connections import connection_manager
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
@@ -65,11 +66,14 @@ async def health_check():
         "disk_free_gb": round(disk_info.free / (1024**3), 2)
     }
     
-    # Check service status
+    # Check service status using connection manager
+    connection_health = await connection_manager.health_check()
+
     services = {
         "api": "healthy",
+        "database": connection_health["database"]["status"],
+        "vector_store": connection_health["vector_store"]["status"],
         "openai": await _check_openai_connection(),
-        "vector_store": await _check_vector_store_connection(),
         "google_drive": await _check_google_drive_connection()
     }
     
@@ -142,10 +146,10 @@ async def _check_openai_connection() -> str:
 
 
 async def _check_vector_store_connection() -> str:
-    """Check vector store connectivity"""
+    """Check vector store connectivity (deprecated - use connection_manager)"""
     try:
-        # TODO: Implement actual vector store connection check
-        # For now, return healthy if configuration exists
+        # This is now handled by connection_manager.health_check()
+        # Keeping for backward compatibility
         if settings.VECTOR_STORE_TYPE and settings.VECTOR_STORE_HOST:
             return "healthy"
         return "not_configured"

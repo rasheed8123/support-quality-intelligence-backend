@@ -6,6 +6,7 @@ import time
 import logging
 
 from app.config import settings
+from app.core.connections import lifespan_manager, connection_manager
 from app.webhook.router import router as webhook_router
 from app.api.endpoints import verification_router, health_router
 
@@ -19,14 +20,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create FastAPI application with comprehensive configuration
+# Create FastAPI application with comprehensive configuration and lifespan management
 app = FastAPI(
     title=settings.API_TITLE,
     description=settings.API_DESCRIPTION,
     version=settings.API_VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
+    lifespan=lifespan_manager  # Handle startup/shutdown connections
 )
 
 # Security middleware
@@ -78,6 +80,12 @@ app.include_router(webhook_router)
 app.include_router(classification.router)
 app.include_router(email.router)
 
+# Simple health endpoint for basic checks
+@app.get("/health", tags=["Health"])
+async def simple_health():
+    """Simple health check endpoint"""
+    return {"ok": True}
+
 # Root endpoint
 @app.get("/", tags=["Root"])
 async def root():
@@ -88,6 +96,12 @@ async def root():
         "description": settings.API_DESCRIPTION,
         "docs_url": "/docs",
         "health_check": "/health",
+        "detailed_health": "/health/",
+        "connections": {
+            "database": "MySQL (AWS RDS)",
+            "vector_store": "Qdrant Cloud",
+            "status": "Production Ready"
+        },
         "endpoints": {
             "rag_verification": "/api/v1/verify-support-response",
             "classification": "/classification",

@@ -305,7 +305,7 @@ class SupportVerificationResponse(BaseModel):
     class Config:
         """Pydantic configuration"""
         use_enum_values = True
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "overall_score": 0.92,
                 "verification_status": "APPROVED",

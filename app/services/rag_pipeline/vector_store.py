@@ -65,18 +65,33 @@ class AdvancedVectorStoreManager:
     
     def __init__(self):
         """Initialize the vector store manager"""
-        self.use_memory_store = not QDRANT_AVAILABLE
+        # Check if we should use memory store based on configuration and availability
+        self.use_memory_store = (
+            settings.VECTOR_STORE_TYPE.lower() == "memory" or
+            not QDRANT_AVAILABLE
+        )
 
         if self.use_memory_store:
             logger.warning("Qdrant not available, using in-memory vector store")
             self.client = MemoryVectorStore()
         else:
             try:
-                self.client = AsyncQdrantClient(
-                    host=settings.VECTOR_STORE_HOST,
-                    port=settings.VECTOR_STORE_PORT,
-                    api_key=settings.VECTOR_STORE_API_KEY
-                )
+                # Check if using Qdrant Cloud (has API key and HTTPS)
+                if settings.VECTOR_STORE_API_KEY and getattr(settings, 'VECTOR_STORE_USE_HTTPS', True):
+                    # Qdrant Cloud configuration
+                    self.client = AsyncQdrantClient(
+                        url=f"https://{settings.VECTOR_STORE_HOST}:{settings.VECTOR_STORE_PORT}",
+                        api_key=settings.VECTOR_STORE_API_KEY
+                    )
+                    logger.info(f"Connected to Qdrant Cloud at {settings.VECTOR_STORE_HOST}")
+                else:
+                    # Local Qdrant configuration
+                    self.client = AsyncQdrantClient(
+                        host=settings.VECTOR_STORE_HOST,
+                        port=settings.VECTOR_STORE_PORT,
+                        api_key=settings.VECTOR_STORE_API_KEY
+                    )
+                    logger.info(f"Connected to local Qdrant at {settings.VECTOR_STORE_HOST}:{settings.VECTOR_STORE_PORT}")
             except Exception as e:
                 logger.warning(f"Failed to connect to Qdrant, using memory store: {str(e)}")
                 self.use_memory_store = True
@@ -272,26 +287,28 @@ class AdvancedVectorStoreManager:
     
     def _prepare_points(self, chunks: List[EmbeddedChunk]) -> List[PointStruct]:
         """Prepare chunks as Qdrant points"""
-        
+
         points = []
         for chunk in chunks:
-            # Generate unique ID if not provided
-            point_id = chunk.chunk_id or str(uuid.uuid4())
-            
+            # Always generate a proper UUID for Qdrant
+            # Store original chunk_id in payload for reference
+            point_id = str(uuid.uuid4())
+
             # Prepare payload with metadata
             payload = {
                 "content": chunk.content,
                 "embedding_model": chunk.embedding_model,
                 "preprocessing_applied": chunk.preprocessing_applied,
+                "original_chunk_id": chunk.chunk_id,  # Store original ID for reference
                 **chunk.metadata
             }
-            
+
             points.append(PointStruct(
                 id=point_id,
                 vector=chunk.embedding,
                 payload=payload
             ))
-        
+
         return points
     
     async def search(
@@ -469,6 +486,18 @@ class AdvancedVectorStoreManager:
             logger.error(f"Failed to delete collection {collection_name}: {str(e)}")
             return False
     
+    async def list_collections(self) -> List[str]:
+        """List all collections in the vector store"""
+        try:
+            if self.use_memory_store:
+                return list(self.client.collections.keys())
+            else:
+                collections = await self.client.get_collections()
+                return [col.name for col in collections.collections]
+        except Exception as e:
+            logger.error(f"Failed to list collections: {str(e)}")
+            return []
+
     async def close(self):
         """Close the vector store connection"""
         if hasattr(self.client, 'close'):
