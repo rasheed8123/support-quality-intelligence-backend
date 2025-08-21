@@ -1,0 +1,913 @@
+# 🧪 **COMPREHENSIVE TEST SCENARIOS**
+## Support Quality Intelligence Backend - Complete Functionality Testing
+
+---
+
+## 📧 **1. EMAIL ANALYSIS AGENT TESTING**
+
+### **1.1 Inbound Email Classification**
+
+#### **Category Classification Tests**
+1. **SPAM Detection**
+   - Test emails: Marketing promotions, unrelated business offers, phishing attempts
+   - Expected: `type = "spam"`, no further processing
+   - Database validation: Check `inbound_email_analysis.type = "spam"`
+
+2. **QUERY Classification**
+   - Test emails: Course inquiries, technical support requests, admission questions
+   - Expected: `type = "query"`, priority assignment, category detection
+   - Database validation: Check `inbound_email_analysis.type = "query"`
+
+3. **INFORMATION Classification**
+   - Test emails: Student information updates, document submissions, general info
+   - Expected: `type = "information"`, lower priority processing
+   - Database validation: Check `inbound_email_analysis.type = "information"`
+
+#### **Priority Detection Tests**
+1. **HIGH Priority Scenarios**
+   - Urgent tone: "URGENT", "ASAP", "immediately needed"
+   - Frustration: "disappointed", "frustrated", "unacceptable"
+   - Complaints: "complaint", "dissatisfied", "poor service"
+   - Refund requests: "refund", "money back", "cancel subscription"
+   - Technical blockers: "can't access", "login failed", "system down"
+   - Expected: `priority = "high"`, SLA threshold = 4 hours
+   - Database validation: Check `inbound_email_analysis.priority = "high"`
+
+2. **MEDIUM Priority Scenarios**
+   - General course queries: "course duration", "syllabus", "schedule"
+   - Clarifications: "clarify", "explain", "understand"
+   - Schedule questions: "timing", "batch", "class schedule"
+   - Expected: `priority = "medium"`, SLA threshold = 8 hours
+   - Database validation: Check `inbound_email_analysis.priority = "medium"`
+
+3. **LOW Priority Scenarios**
+   - Information requests: "information about", "details", "brochure"
+   - Thank you notes: "thank you", "appreciate", "grateful"
+   - General feedback: "feedback", "suggestion", "opinion"
+   - Expected: `priority = "low"`, SLA threshold = 24 hours
+   - Database validation: Check `inbound_email_analysis.priority = "low"`
+
+#### **Issue Category Detection Tests**
+1. **payment_failure**
+   - Test emails: Payment declined, transaction failed, billing issues
+   - Expected: `category = "payment_failure"`
+   - Database validation: Check `inbound_email_analysis.category = "payment_failure"`
+
+2. **refund_access**
+   - Test emails: Refund requests, money back demands, cancellation requests
+   - Expected: `category = "refund_access"`
+
+3. **access_issue**
+   - Test emails: Login problems, account locked, platform access issues
+   - Expected: `category = "access_issue"`
+
+4. **certificate_question**
+   - Test emails: Certificate queries, completion status, credential verification
+   - Expected: `category = "certificate_question"`
+
+5. **general_information**
+   - Test emails: Course info, admission details, general inquiries
+   - Expected: `category = "general_information"`
+
+6. **thank_you_notes**
+   - Test emails: Appreciation messages, positive feedback, gratitude
+   - Expected: `category = "thank_you_notes"`
+
+7. **others**
+   - Test emails: Uncategorized queries, mixed topics, unclear requests
+   - Expected: `category = "others"`
+
+### **1.2 Outbound Email Analysis**
+
+#### **Response Quality Analysis Tests**
+1. **Factual Accuracy Testing**
+   - Test responses with correct course fees, duration, policies
+   - Test responses with incorrect information
+   - Expected: `factual_accuracy` score 0.0-1.0
+   - Database validation: Check `outbound_email_analysis.factual_accuracy`
+
+2. **Guideline Compliance Testing**
+   - Test responses following company communication guidelines
+   - Test responses violating tone/format guidelines
+   - Expected: `guideline_compliance` score 0.0-1.0
+   - Database validation: Check `outbound_email_analysis.guideline_compliance`
+
+3. **Completeness Testing**
+   - Test responses addressing all customer questions
+   - Test incomplete responses missing key information
+   - Expected: `completeness` score 0.0-1.0
+   - Database validation: Check `outbound_email_analysis.completeness`
+
+4. **Tone Analysis Testing**
+   - Test professional, friendly, empathetic responses
+   - Test cold, robotic, or unprofessional responses
+   - Expected: `tone` values like "professional", "friendly", "cold"
+   - Database validation: Check `outbound_email_analysis.tone`
+
+---
+
+## 🤖 **2. RAG PIPELINE TESTING**
+
+### **2.1 Claim Extraction Testing**
+
+#### **Claim Type Detection**
+1. **factual_data Claims**
+   - Test responses: "Course fee is ₹50,000", "Duration is 6 months"
+   - Expected: `claim_type = "factual_data"`, high verification priority
+   - Validation: Extract specific numbers, amounts, percentages
+
+2. **policy_statement Claims**
+   - Test responses: "Refund policy allows 7-day cancellation"
+   - Expected: `claim_type = "policy_statement"`, medium verification priority
+   - Validation: Extract policy references and rules
+
+3. **procedure_step Claims**
+   - Test responses: "First complete payment, then access course"
+   - Expected: `claim_type = "procedure_step"`, medium verification priority
+   - Validation: Extract step-by-step instructions
+
+4. **timeline_info Claims**
+   - Test responses: "Certificate issued within 2 weeks"
+   - Expected: `claim_type = "timeline_info"`, high verification priority
+   - Validation: Extract time-based commitments
+
+5. **contact_info Claims**
+   - Test responses: "Contact support at support@company.com"
+   - Expected: `claim_type = "contact_info"`, low verification priority
+   - Validation: Extract contact details and availability
+
+#### **Verification Priority Testing**
+1. **High Priority Claims**
+   - Critical facts: fees, duration, requirements
+   - Expected: `verification_priority = "high"`
+   - Validation: Claims affecting student decisions
+
+2. **Medium Priority Claims**
+   - Important details: policies, procedures
+   - Expected: `verification_priority = "medium"`
+   - Validation: Claims affecting student experience
+
+3. **Low Priority Claims**
+   - General information: contact details, general statements
+   - Expected: `verification_priority = "low"`
+   - Validation: Claims with minimal impact
+
+### **2.2 Evidence Retrieval Testing**
+
+#### **Multi-Collection Search**
+1. **Course Catalog Search**
+   - Test claims about course content, duration, fees
+   - Expected: Evidence from course-catalog-data collection
+   - Validation: Relevant document chunks retrieved
+
+2. **Assessment Policies Search**
+   - Test claims about grading, evaluation, certification
+   - Expected: Evidence from assessment-policies collection
+   - Validation: Policy document chunks retrieved
+
+3. **Placement Assistance Search**
+   - Test claims about job placement, company partnerships
+   - Expected: Evidence from placement-assistance-data collection
+   - Validation: Placement data chunks retrieved
+
+#### **Evidence Quality Testing**
+1. **Relevance Score Validation**
+   - Expected: Evidence with relevance_score > 0.7 for accurate claims
+   - Expected: Evidence with relevance_score < 0.5 for inaccurate claims
+   - Validation: Score correlation with claim accuracy
+
+2. **Document Type Matching**
+   - Expected: `document_type` matches `expected_evidence_type`
+   - Validation: Appropriate evidence sources selected
+
+### **2.3 Fact Verification Testing**
+
+#### **Claim Status Testing**
+1. **VERIFIED Claims**
+   - Test accurate claims with strong evidence
+   - Expected: `status = "VERIFIED"`, high confidence score
+   - Validation: Claims supported by authoritative evidence
+
+2. **CONTRADICTED Claims**
+   - Test inaccurate claims contradicted by evidence
+   - Expected: `status = "CONTRADICTED"`, high confidence score
+   - Validation: Claims directly contradicted by evidence
+
+3. **INSUFFICIENT_EVIDENCE Claims**
+   - Test claims with weak or missing evidence
+   - Expected: `status = "INSUFFICIENT_EVIDENCE"`, low confidence
+   - Validation: Claims lacking supporting evidence
+
+4. **PARTIALLY_VERIFIED Claims**
+   - Test claims with mixed evidence support
+   - Expected: `status = "PARTIALLY_VERIFIED"`, medium confidence
+   - Validation: Claims with partial evidence support
+
+#### **Confidence Score Testing**
+1. **High Confidence (>0.9)**
+   - Strong evidence alignment with claims
+   - Clear verification or contradiction
+
+2. **Medium Confidence (0.5-0.9)**
+   - Moderate evidence support
+   - Some uncertainty in verification
+
+3. **Low Confidence (<0.5)**
+   - Weak or conflicting evidence
+   - High uncertainty in verification
+
+### **2.4 Compliance Checking Testing**
+
+#### **Policy Compliance**
+1. **Communication Standards**
+   - Test responses for professional tone
+   - Test responses for appropriate language
+   - Expected: Compliance violations detected for unprofessional responses
+
+2. **Information Accuracy**
+   - Test responses with correct vs incorrect information
+   - Expected: Violations for factual inaccuracies
+
+3. **Completeness Standards**
+   - Test complete vs incomplete responses
+   - Expected: Violations for incomplete information
+
+#### **Compliance Score Testing**
+1. **High Compliance (>0.8)**
+   - Responses following all guidelines
+   - Professional, accurate, complete
+
+2. **Medium Compliance (0.5-0.8)**
+   - Minor guideline violations
+   - Generally acceptable responses
+
+3. **Low Compliance (<0.5)**
+   - Major guideline violations
+   - Unprofessional or inaccurate responses
+
+### **2.5 Feedback Generation Testing**
+
+#### **Improvement Suggestions**
+1. **Accuracy Improvements**
+   - Suggestions for correcting factual errors
+   - References to authoritative sources
+
+2. **Tone Improvements**
+   - Suggestions for more professional language
+   - Empathy and understanding enhancements
+
+3. **Completeness Improvements**
+   - Suggestions for addressing missed questions
+   - Additional information recommendations
+
+#### **Response Suggestions**
+1. **Alternative Responses**
+   - Better phrased responses for the same query
+   - More accurate and complete alternatives
+
+2. **Template Suggestions**
+   - Standardized response templates
+   - Best practice examples
+
+---
+
+## 🚨 **3. ALERT SYSTEM TESTING**
+
+### **3.1 SLA Breach Alert Testing**
+
+#### **Priority-Based SLA Thresholds**
+1. **High Priority SLA Breach (4 hours)**
+   - Create high priority email, wait 4+ hours without response
+   - Expected: `alert_type = "sla_breach"`, `severity = "critical"`
+   - Database validation: Check `alerts.alert_type = "sla_breach"`
+   - Validation: `current_value > 4.0`, `threshold_value = 4.0`
+
+2. **Medium Priority SLA Breach (8 hours)**
+   - Create medium priority email, wait 8+ hours without response
+   - Expected: `alert_type = "sla_breach"`, `severity = "warning"`
+   - Database validation: Check alert creation with correct thresholds
+
+3. **Low Priority SLA Breach (24 hours)**
+   - Create low priority email, wait 24+ hours without response
+   - Expected: `alert_type = "sla_breach"`, `severity = "warning"`
+   - Database validation: Check alert timing and severity
+
+#### **SLA Monitoring Frequency**
+1. **15-Minute Check Intervals**
+   - Verify alerts created within 15 minutes of SLA breach
+   - Expected: Alert creation timestamp within monitoring window
+   - Validation: Scheduler job execution frequency
+
+### **3.2 Aging Query Alert Testing**
+
+#### **24-Hour Aging Threshold**
+1. **Unresponded Query Aging**
+   - Create query email, wait 24+ hours without any response
+   - Expected: `alert_type = "aging_query"`, `severity = "warning"`
+   - Database validation: Check `alerts.alert_type = "aging_query"`
+
+2. **Multiple Aging Queries**
+   - Create multiple queries, let them age beyond threshold
+   - Expected: Individual alerts for each aging query
+   - Validation: Correct alert count and email associations
+
+#### **Hourly Monitoring**
+1. **Aging Detection Frequency**
+   - Verify aging alerts created within 1 hour of threshold breach
+   - Expected: Timely alert generation
+   - Validation: Scheduler job execution
+
+### **3.3 Quality-Based Alert Testing**
+
+#### **Factual Error Detection**
+1. **Low Accuracy Score Alerts**
+   - Create outbound response with `factual_accuracy < 0.7`
+   - Expected: `alert_type = "factual_error"`, `severity = "critical"`
+   - Database validation: Check alert creation for quality violations
+
+2. **Accuracy Threshold Testing**
+   - Test responses with accuracy scores: 0.9, 0.7, 0.5, 0.3
+   - Expected: Alerts only for scores < 0.7
+   - Validation: Threshold enforcement accuracy
+
+#### **Negative Sentiment Detection**
+1. **Poor Tone Alerts**
+   - Create responses with negative/unprofessional tone
+   - Expected: `alert_type = "negative_sentiment"`, `severity = "warning"`
+   - Database validation: Check sentiment-based alert creation
+
+2. **Sentiment Score Testing**
+   - Test responses with various sentiment scores
+   - Expected: Alerts for scores below threshold
+   - Validation: Sentiment analysis integration
+
+### **3.4 Alert Management Testing**
+
+#### **Alert Acknowledgment**
+1. **Manual Acknowledgment**
+   - Create alert, acknowledge via API
+   - Expected: `acknowledged_at` timestamp, `acknowledged_by` user
+   - Database validation: Check acknowledgment fields updated
+
+2. **Acknowledgment API Testing**
+   - Test POST `/alerts/{id}/acknowledge` endpoint
+   - Expected: 200 response, alert status updated
+   - Validation: API response and database consistency
+
+#### **Alert Resolution**
+1. **Manual Resolution**
+   - Create alert, resolve via API
+   - Expected: `resolved_at` timestamp, alert marked resolved
+   - Database validation: Check resolution fields updated
+
+2. **Resolution API Testing**
+   - Test POST `/alerts/{id}/resolve` endpoint
+   - Expected: 200 response, alert status updated
+   - Validation: API response and database consistency
+
+### **3.5 Alert Notification Testing**
+
+#### **Email Notification System**
+1. **Notification Sending**
+   - Create critical alert, verify email notification attempt
+   - Expected: `email_notification_sent = true`, `email_sent_at` timestamp
+   - Database validation: Check notification tracking fields
+
+2. **Notification Retry Logic**
+   - Simulate email sending failure
+   - Expected: `notification_retry_count` incremented
+   - Validation: Retry mechanism functionality
+
+#### **Severity-Based Recipients**
+1. **Critical Alert Recipients**
+   - Test critical alerts sent to admin and support manager
+   - Expected: Multiple recipients for critical alerts
+   - Validation: Recipient list based on severity
+
+2. **Warning Alert Recipients**
+   - Test warning alerts sent to admin only
+   - Expected: Single recipient for warning alerts
+   - Validation: Appropriate recipient selection
+
+### **3.6 Alert Scheduler Testing**
+
+#### **Background Job Execution**
+1. **SLA Breach Monitor (15 minutes)**
+   - Verify job runs every 15 minutes
+   - Expected: Regular execution, no missed intervals
+   - Validation: Job execution logs and timing
+
+2. **Aging Query Monitor (1 hour)**
+   - Verify job runs every hour
+   - Expected: Hourly execution consistency
+   - Validation: Scheduler reliability
+
+3. **Quality Monitors (30 minutes)**
+   - Verify factual error and sentiment monitors run every 30 minutes
+   - Expected: Regular quality checking
+   - Validation: Quality alert generation
+
+#### **Daily Jobs**
+1. **Daily Alert Summary (9 AM)**
+   - Verify daily summary generation at 9 AM
+   - Expected: Summary email with alert statistics
+   - Validation: Summary content and timing
+
+2. **Alert Cleanup (2 AM)**
+   - Verify old alert cleanup at 2 AM
+   - Expected: Removal of resolved alerts older than retention period
+   - Validation: Database cleanup effectiveness
+
+### **3.7 Alert API Testing**
+
+#### **Dashboard Endpoints**
+1. **GET /alerts/dashboard**
+   - Test real-time dashboard data retrieval
+   - Expected: Current alert counts, severity breakdown
+   - Validation: Data accuracy and response format
+
+2. **GET /alerts/active**
+   - Test active alerts listing
+   - Expected: Only unresolved alerts returned
+   - Validation: Filtering and sorting accuracy
+
+#### **Statistics Endpoints**
+1. **GET /alerts/statistics**
+   - Test alert analytics and metrics
+   - Expected: Historical data, trends, patterns
+   - Validation: Statistical accuracy and completeness
+
+2. **Alert Type Information**
+   - Test GET /alerts/types endpoint
+   - Expected: Available alert types and descriptions
+   - Validation: Complete alert type catalog
+
+---
+
+## 💾 **4. DATABASE TESTING**
+
+### **4.1 Email Table Testing**
+
+#### **Email Record Creation**
+1. **Inbound Email Storage**
+   - Test email record creation with `is_inbound = true`
+   - Expected: Unique `email_identifier`, correct `thread_id`
+   - Database validation: Check `email` table record creation
+
+2. **Outbound Email Storage**
+   - Test email record creation with `is_inbound = false`
+   - Expected: Proper email record with outbound flag
+   - Database validation: Check email direction tracking
+
+#### **Email Relationships**
+1. **Inbound Analysis Relationship**
+   - Test one-to-one relationship with `inbound_email_analysis`
+   - Expected: Proper foreign key relationship
+   - Database validation: Check relationship integrity
+
+2. **Outbound Analysis Relationship**
+   - Test one-to-one relationship with `outbound_email_analysis`
+   - Expected: Proper foreign key relationship
+   - Database validation: Check relationship integrity
+
+3. **Alert Relationships**
+   - Test one-to-many relationship with `alerts`
+   - Expected: Multiple alerts per email possible
+   - Database validation: Check cascade delete behavior
+
+### **4.2 Email Analysis Tables Testing**
+
+#### **Inbound Email Analysis**
+1. **Classification Data Storage**
+   - Test storage of `type`, `priority`, `category`
+   - Expected: Correct classification data persistence
+   - Database validation: Check field values and constraints
+
+2. **Response Tracking**
+   - Test `responded` flag updates
+   - Expected: Flag updated when response provided
+   - Database validation: Check response status tracking
+
+#### **Outbound Email Analysis**
+1. **Quality Metrics Storage**
+   - Test storage of `factual_accuracy`, `guideline_compliance`, `completeness`
+   - Expected: Float values between 0.0 and 1.0
+   - Database validation: Check metric value ranges
+
+2. **Tone Analysis Storage**
+   - Test storage of `tone` classification
+   - Expected: String values like "professional", "friendly", "cold"
+   - Database validation: Check tone categorization
+
+### **4.3 Alert Table Testing**
+
+#### **Alert Record Creation**
+1. **Core Alert Fields**
+   - Test storage of `alert_type`, `severity`, `title`, `description`
+   - Expected: Complete alert information storage
+   - Database validation: Check required field population
+
+2. **Alert Metadata**
+   - Test storage of `triggered_at`, `acknowledged_at`, `resolved_at`
+   - Expected: Proper timestamp tracking
+   - Database validation: Check datetime field accuracy
+
+3. **Alert Context**
+   - Test storage of `priority_level`, `threshold_value`, `current_value`
+   - Expected: Alert context information preserved
+   - Database validation: Check numeric value storage
+
+#### **Alert State Management**
+1. **Acknowledgment Tracking**
+   - Test `acknowledged_by` and `acknowledged_at` updates
+   - Expected: Proper acknowledgment state tracking
+   - Database validation: Check state transition accuracy
+
+2. **Resolution Tracking**
+   - Test `resolved_at` timestamp updates
+   - Expected: Proper resolution state tracking
+   - Database validation: Check resolution state persistence
+
+### **4.4 Daily Reports Testing**
+
+#### **Report Generation**
+1. **Daily Metrics Calculation**
+   - Test calculation of email counts, response rates, quality scores
+   - Expected: Accurate daily statistics
+   - Database validation: Check calculated field accuracy
+
+2. **Alert Statistics**
+   - Test alert count aggregation by severity and type
+   - Expected: Correct alert statistics in daily reports
+   - Database validation: Check alert metric accuracy
+
+#### **Report Storage**
+1. **Date-Based Storage**
+   - Test daily report storage with `report_date` as primary key
+   - Expected: One report per date, no duplicates
+   - Database validation: Check unique date constraint
+
+2. **JSON Field Storage**
+   - Test storage of `high_priority_top_issues`, `medium_priority_top_issues`
+   - Expected: Proper JSON data storage and retrieval
+   - Database validation: Check JSON field integrity
+
+### **4.5 Audit Logs Testing**
+
+#### **Event Logging**
+1. **System Event Tracking**
+   - Test logging of email processing, alert creation, API calls
+   - Expected: Comprehensive event logging
+   - Database validation: Check audit trail completeness
+
+2. **Payload Storage**
+   - Test storage of event context in JSON `payload` field
+   - Expected: Detailed event information preservation
+   - Database validation: Check payload data integrity
+
+#### **Log Querying**
+1. **Event Type Filtering**
+   - Test querying logs by `event_type`
+   - Expected: Efficient event type-based filtering
+   - Database validation: Check query performance and accuracy
+
+2. **Timestamp-Based Queries**
+   - Test querying logs by `created_at` timestamp ranges
+   - Expected: Time-based log retrieval
+   - Database validation: Check temporal query accuracy
+
+---
+
+## 🔄 **5. INTEGRATION TESTING**
+
+### **5.1 End-to-End Email Processing**
+
+#### **Complete Inbound Flow**
+1. **Email Receipt → Classification → Alert Generation**
+   - Test complete flow from email receipt to alert creation
+   - Expected: Proper data flow through all components
+   - Validation: Database consistency across all tables
+
+2. **High Priority Query Processing**
+   - Test high priority query processing and SLA monitoring
+   - Expected: Immediate classification, SLA tracking, timely alerts
+   - Validation: Priority-based processing accuracy
+
+#### **Complete Outbound Flow**
+1. **Response → RAG Analysis → Quality Assessment → Alerts**
+   - Test complete outbound processing with RAG pipeline
+   - Expected: Quality analysis, compliance checking, alert generation
+   - Validation: RAG pipeline integration with alert system
+
+### **5.2 API Integration Testing**
+
+#### **Webhook Processing**
+1. **Gmail Webhook → Email Processing → Database Storage**
+   - Test webhook receipt and processing
+   - Expected: Proper webhook handling and data persistence
+   - Validation: Webhook reliability and data integrity
+
+2. **Pub/Sub Message Processing**
+   - Test Google Pub/Sub message handling
+   - Expected: Reliable message processing and acknowledgment
+   - Validation: Message processing accuracy
+
+#### **Alert API Integration**
+1. **Alert Creation → API Retrieval → Management Actions**
+   - Test alert creation and subsequent API operations
+   - Expected: Consistent alert data across creation and retrieval
+   - Validation: API data consistency
+
+### **5.3 Performance Testing**
+
+#### **Load Testing**
+1. **High Volume Email Processing**
+   - Test processing of 100+ emails simultaneously
+   - Expected: System stability under load
+   - Validation: Performance metrics and error rates
+
+2. **Concurrent RAG Pipeline Execution**
+   - Test multiple RAG verifications running concurrently
+   - Expected: Proper resource management and result accuracy
+   - Validation: Concurrent processing reliability
+
+#### **Response Time Testing**
+1. **API Response Times**
+   - Test all API endpoints for response time compliance
+   - Expected: <500ms for simple endpoints, <3 minutes for RAG
+   - Validation: Performance SLA compliance
+
+2. **Database Query Performance**
+   - Test complex queries on large datasets
+   - Expected: Efficient query execution
+   - Validation: Database performance optimization
+
+---
+
+## ✅ **6. VALIDATION CRITERIA**
+
+### **6.1 Data Integrity Validation**
+- All foreign key relationships maintained
+- No orphaned records in dependent tables
+- Proper cascade delete behavior
+- Data type constraints enforced
+- Required field validation working
+
+### **6.2 Business Logic Validation**
+- Classification accuracy > 85%
+- Priority assignment correctness > 90%
+- SLA threshold enforcement accuracy
+- Alert generation reliability > 95%
+- RAG pipeline accuracy > 80%
+
+### **6.3 Performance Validation**
+- API response times within SLA
+- Database query performance acceptable
+- System stability under load
+- Memory usage within limits
+- Error rates < 5%
+
+### **6.4 Security Validation**
+- Proper authentication and authorization
+- Sensitive data protection
+- API security measures
+- Database access controls
+- Audit trail completeness
+
+---
+
+## 🎯 **7. TEST EXECUTION STRATEGY**
+
+### **7.1 Test Environment Setup**
+1. **Database Preparation**
+   - Clean database state for each test suite
+   - Test data seeding for complex scenarios
+   - Backup and restore procedures
+
+2. **Service Dependencies**
+   - OpenAI API connectivity
+   - Qdrant vector store access
+   - Gmail API authentication
+   - SMTP server configuration
+
+### **7.2 Test Data Management**
+1. **Email Test Data**
+   - Diverse email samples for each category
+   - Edge cases and boundary conditions
+   - Realistic email content and formatting
+
+2. **Expected Results**
+   - Predefined expected outcomes for each test
+   - Validation criteria and success metrics
+   - Error condition handling
+
+### **7.3 Automated Testing**
+1. **Unit Test Coverage**
+   - Individual component testing
+   - Mock external dependencies
+   - Fast execution test suites
+
+2. **Integration Test Automation**
+   - End-to-end workflow testing
+   - Database validation automation
+   - API testing automation
+
+---
+
+**This comprehensive test suite covers all major functionalities of the Support Quality Intelligence Backend system, ensuring thorough validation of email processing, RAG pipeline, alert system, and database operations.**
+
+---
+
+## 🛠️ **8. TEST IMPLEMENTATION FILES**
+
+### **8.1 Test Documentation & Scenarios**
+- **`testcase`** - This comprehensive test scenarios document
+- **`test_implementation_examples.py`** - Specific test implementations for each functionality
+- **`test_data_generator.py`** - Generates test data for all scenarios
+- **`comprehensive_test_runner.py`** - Automated test execution framework
+
+### **8.2 Test Data Categories**
+1. **Email Classification Data**
+   - Spam emails (3 samples)
+   - High priority queries (3 samples)
+   - Medium priority queries (3 samples)
+   - Low priority queries (3 samples)
+
+2. **RAG Pipeline Data**
+   - Outbound responses with verifiable claims
+   - Expected accuracy and compliance scores
+   - Evidence retrieval test cases
+
+3. **Alert System Data**
+   - SLA breach scenarios (high/medium/low priority)
+   - Aging query scenarios
+   - Quality-based alert scenarios
+   - Expected alert properties and thresholds
+
+4. **Database Test Data**
+   - Relationship integrity tests
+   - Cascade delete behavior tests
+   - Performance test datasets (100+ records)
+
+### **8.3 Automated Test Execution**
+
+#### **Running Individual Test Categories**
+```bash
+# Email classification tests
+python tests/docs/test_implementation_examples.py
+
+# Generate test data
+python tests/docs/test_data_generator.py
+
+# Run comprehensive test suite
+python tests/docs/comprehensive_test_runner.py
+```
+
+#### **Test Validation Criteria**
+- **Email Classification**: >85% accuracy
+- **RAG Pipeline**: >80% accuracy, proper claim extraction
+- **Alert System**: >95% reliability, correct thresholds
+- **Database Operations**: 100% integrity, proper relationships
+- **API Endpoints**: <500ms response time, proper error handling
+
+### **8.4 Test Report Generation**
+- **Automated Reports**: JSON format with detailed results
+- **Success Metrics**: Pass/fail rates, execution times
+- **Error Analysis**: Detailed failure reasons and recommendations
+- **Performance Metrics**: Response times, throughput, resource usage
+
+---
+
+## 🎯 **9. TESTING BEST PRACTICES IMPLEMENTED**
+
+### **9.1 Test Data Management**
+- **Realistic Data**: Based on actual use cases and edge conditions
+- **Comprehensive Coverage**: All email types, priorities, and categories
+- **Edge Cases**: Boundary conditions, error scenarios, unusual inputs
+- **Performance Data**: Large datasets for load testing
+
+### **9.2 Database Testing Strategy**
+- **Isolation**: Each test uses clean database state
+- **Relationships**: Validates all foreign key relationships
+- **Constraints**: Tests data type and business rule constraints
+- **Cleanup**: Proper cleanup after each test to prevent interference
+
+### **9.3 Integration Testing Approach**
+- **End-to-End Flows**: Complete workflows from input to output
+- **Component Integration**: Validates interaction between services
+- **External Dependencies**: Tests API integrations (OpenAI, Qdrant)
+- **Error Handling**: Validates graceful failure and recovery
+
+### **9.4 Performance Testing Strategy**
+- **Load Testing**: High volume email processing
+- **Stress Testing**: System limits and breaking points
+- **Response Time**: API endpoint performance validation
+- **Resource Usage**: Memory, CPU, and database performance
+
+---
+
+## 📊 **10. EXPECTED TEST OUTCOMES**
+
+### **10.1 Email Classification Results**
+- **Spam Detection**: 100% accuracy expected
+- **Priority Assignment**: >90% accuracy for clear cases
+- **Category Classification**: >85% accuracy across all categories
+- **Processing Time**: <2 seconds per email
+
+### **10.2 RAG Pipeline Results**
+- **Claim Extraction**: >80% of verifiable claims identified
+- **Evidence Retrieval**: Relevant evidence for >90% of claims
+- **Fact Verification**: >80% accuracy in verification status
+- **Processing Time**: 30-180 seconds depending on complexity
+
+### **10.3 Alert System Results**
+- **SLA Monitoring**: 100% accuracy in breach detection
+- **Alert Creation**: <15 minutes from trigger to alert
+- **Quality Alerts**: >95% accuracy in quality issue detection
+- **Notification Delivery**: >98% success rate
+
+### **10.4 Database Performance Results**
+- **Query Performance**: <200ms for standard operations
+- **Relationship Integrity**: 100% maintained
+- **Data Consistency**: No orphaned or inconsistent records
+- **Concurrent Access**: Proper handling of simultaneous operations
+
+---
+
+## 🔧 **11. TROUBLESHOOTING & DEBUGGING**
+
+### **11.1 Common Test Failures**
+1. **Database Connection Issues**
+   - Check MySQL service status
+   - Verify connection string in .env
+   - Ensure database exists and is accessible
+
+2. **API Integration Failures**
+   - Verify OpenAI API key validity
+   - Check Qdrant Cloud connectivity
+   - Validate API rate limits and quotas
+
+3. **Classification Accuracy Issues**
+   - Review training data quality
+   - Check model parameters and thresholds
+   - Validate input data preprocessing
+
+4. **Alert System Timing Issues**
+   - Verify scheduler job execution
+   - Check system clock synchronization
+   - Validate threshold calculations
+
+### **11.2 Debug Mode Execution**
+```bash
+# Enable debug logging
+export LOG_LEVEL=DEBUG
+
+# Run tests with verbose output
+python tests/docs/comprehensive_test_runner.py --verbose
+
+# Check specific component
+python tests/docs/test_implementation_examples.py --component=email_classification
+```
+
+### **11.3 Test Data Validation**
+- **Data Integrity**: Verify test data matches expected formats
+- **Realistic Scenarios**: Ensure test cases reflect real-world usage
+- **Edge Cases**: Include boundary conditions and error scenarios
+- **Performance Data**: Use appropriate dataset sizes for load testing
+
+---
+
+## 📈 **12. CONTINUOUS IMPROVEMENT**
+
+### **12.1 Test Metrics Tracking**
+- **Success Rate Trends**: Monitor test pass rates over time
+- **Performance Benchmarks**: Track response times and throughput
+- **Error Pattern Analysis**: Identify recurring failure patterns
+- **Coverage Analysis**: Ensure all code paths are tested
+
+### **12.2 Test Suite Maintenance**
+- **Regular Updates**: Keep test data current with system changes
+- **New Scenario Addition**: Add tests for new features and edge cases
+- **Performance Optimization**: Improve test execution speed
+- **Documentation Updates**: Keep test documentation synchronized
+
+### **12.3 Quality Assurance Integration**
+- **CI/CD Integration**: Automated test execution in deployment pipeline
+- **Pre-deployment Validation**: Mandatory test passage before releases
+- **Regression Testing**: Ensure new changes don't break existing functionality
+- **Performance Monitoring**: Continuous performance validation
+
+---
+
+**This comprehensive testing framework ensures the Support Quality Intelligence Backend maintains high quality, reliability, and performance standards across all functionalities. The combination of detailed test scenarios, automated execution, and thorough validation provides confidence in system behavior and helps identify issues before they impact production users.**
+
+**Total Test Coverage**:
+- 📧 **Email Processing**: 12 test scenarios across all categories
+- 🤖 **RAG Pipeline**: 6 comprehensive verification tests
+- 🚨 **Alert System**: 8 alert type and threshold tests
+- 💾 **Database**: 15 integrity and relationship tests
+- 🌐 **API Endpoints**: 10 endpoint functionality tests
+- ⚡ **Performance**: 5 load and stress tests
+
+**Expected Execution Time**: 15-30 minutes for complete test suite
+**Success Criteria**: >90% overall pass rate with detailed failure analysis

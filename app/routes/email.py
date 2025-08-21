@@ -90,7 +90,9 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
     # Gmail push payload has emailAddress and historyId
     email_address = payload.get("emailAddress")
     history_id = payload.get("historyId")
+    print(f"email_address: {email_address}, history_id: {history_id}")
     if not email_address or not history_id:
+        print("Invalid Gmail payload: missing emailAddress or historyId")
         raise HTTPException(status_code=400, detail="Invalid Gmail payload: missing emailAddress or historyId")
 
     # Optional: verify Google-signed JWT audience for Pub/Sub Push
@@ -113,18 +115,22 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
     try:
         client = _get_gmail_client()
         new_messages = client.fetch_new_messages_since(start_history_id=last_id)
+        logger.info(f"new_messages: {new_messages}")
     except Exception as exc:  # noqa: BLE001
         # Return 200 so Pub/Sub does not endlessly retry. The error will be logged by server.
+        logger.error(f"Failed to fetch new messages: {exc}")
         return {"status": "error", "detail": str(exc)}
 
     # Persist new high-watermark
     state_store.set_last_history_id(email_address, str(history_id))
 
     logger.info(f"Processing {len(new_messages)} new messages")
-    
+
     # Process each message and call classify_email
     processed_count = 0
+    logger.info(f"new_messages: {new_messages}")
     for message in new_messages:
+        logger.info(f"Processing message {message.get('id')}")
         try:
             # Extract required fields
             email_id = message.get("id")
@@ -132,11 +138,29 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
             headers = message.get("headers", {})
             from_email = headers.get("From", "")
             subject = headers.get("Subject", "")
+
+            # 🔍 DETAILED LOGGING: Raw message data
+            logger.info(f"📧 PROCESSING EMAIL {processed_count + 1}/{len(new_messages)}")
+            logger.info(f"   Email ID: {email_id}")
+            logger.info(f"   Thread ID: {thread_id}")
+            logger.info(f"   From: {from_email}")
+            logger.info(f"   Subject: {subject}")
+            logger.info(f"   Headers: {headers}")
+            logger.info(f"   Label IDs: {message.get('labelIds', [])}")
+            logger.info(f"   Internal Date: {message.get('internalDate', 'N/A')}")
             
             # Get body from thread's latest message
             thread = message.get("thread", {})
             latest_message = thread.get("latest", {})
             body = latest_message.get("bodyText", "") or latest_message.get("snippet", "")
+
+            # 🔍 DETAILED LOGGING: Body content
+            logger.info(f"   📝 EMAIL BODY ({len(body)} chars):")
+            logger.info(f"   {'-' * 50}")
+            logger.info(f"   {body[:500]}{'...' if len(body) > 500 else ''}")
+            logger.info(f"   {'-' * 50}")
+            logger.info(f"   Thread data: {thread.keys() if thread else 'No thread'}")
+            logger.info(f"   Latest message keys: {latest_message.keys() if latest_message else 'No latest message'}")
 
             # Extract thread context for outbound emails with chronological ordering
             thread_context = None
@@ -184,8 +208,23 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
             label_ids = message.get("labelIds", [])
             has_sent_label = "SENT" in label_ids
 
-            # Log for debugging
-            logger.info(f"Email from: {from_email}, Support email check: {support_email not in from_email.lower()}, SENT label: {has_sent_label}, Final is_inbound: {is_inbound}")
+            # 🔍 DETAILED LOGGING: Direction determination
+            logger.info(f"   🎯 EMAIL DIRECTION ANALYSIS:")
+            logger.info(f"      From email: '{from_email}'")
+            logger.info(f"      Support email: '{support_email}'")
+            logger.info(f"      Contains support email: {support_email in from_email.lower()}")
+            logger.info(f"      Has SENT label: {has_sent_label}")
+            logger.info(f"      Final is_inbound: {is_inbound}")
+            logger.info(f"      Direction: {'INBOUND (Customer → Support)' if is_inbound else 'OUTBOUND (Support → Customer)'}")
+
+            # 🔍 DETAILED LOGGING: Thread context
+            if thread_context:
+                logger.info(f"   📧 THREAD CONTEXT ({len(thread_context)} chars):")
+                logger.info(f"   {thread_context[:300]}{'...' if len(thread_context) > 300 else ''}")
+            else:
+                logger.info(f"   📧 NO THREAD CONTEXT")
+
+            logger.info(f"   🚀 CALLING classify_email() for {email_id}")
 
             # Call classify_email function with thread context (now async)
             await classify_email(
@@ -197,6 +236,8 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
                 is_inbound=is_inbound,
                 thread_context=thread_context
             )
+
+            logger.info(f"   ✅ classify_email() completed for {email_id}")
 
             
             processed_count += 1

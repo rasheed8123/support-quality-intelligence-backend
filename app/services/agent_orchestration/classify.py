@@ -30,8 +30,22 @@ async def classify_email(email_id: str, from_email: str, thread_id: str, subject
         is_inbound: True if inbound (inbox), False if outbound (sent)
         thread_context: Full email thread context for outbound processing
     """
+    # 🔍 DETAILED LOGGING: Function entry
+    logger.info(f"🎯 CLASSIFY_EMAIL STARTED")
+    logger.info(f"   Email ID: {email_id}")
+    logger.info(f"   From: {from_email}")
+    logger.info(f"   Thread ID: {thread_id}")
+    logger.info(f"   Subject: {subject}")
+    logger.info(f"   Is Inbound: {is_inbound}")
+    logger.info(f"   Body Length: {len(body)} characters")
+    logger.info(f"   Thread Context Length: {len(thread_context) if thread_context else 0} characters")
+    logger.info(f"   Direction: {'INBOUND (Customer → Support)' if is_inbound else 'OUTBOUND (Support → Customer)'}")
+
     db = SessionLocal()
     try:
+        # 🔍 DETAILED LOGGING: Database operations
+        logger.info(f"   📊 Creating email record in database...")
+
         # Create email record
         email = Email(
             email_identifier=email_id,
@@ -41,14 +55,28 @@ async def classify_email(email_id: str, from_email: str, thread_id: str, subject
         )
         db.add(email)
         db.flush()  # Get the email ID
+
+        logger.info(f"   ✅ Email record created with ID: {email.id}")
+        logger.info(f"   📋 Email record details:")
+        logger.info(f"      - email_identifier: {email.email_identifier}")
+        logger.info(f"      - is_inbound: {email.is_inbound}")
+        logger.info(f"      - thread_id: {email.thread_id}")
+        logger.info(f"      - created_at: {email.created_at}")
         
         if is_inbound:
-            # Inbound email processing (inbox)
+            # 🔍 DETAILED LOGGING: Inbound processing
+            logger.info(f"   📥 PROCESSING INBOUND EMAIL (Customer → Support)")
+            logger.info(f"      This will trigger spam/priority/issue classification")
             await _process_inbound_email(db, email, from_email, subject, body)
+            logger.info(f"   ✅ INBOUND EMAIL PROCESSING COMPLETED")
         else:
+            # 🔍 DETAILED LOGGING: Outbound processing
+            logger.info(f"   📤 PROCESSING OUTBOUND EMAIL (Support → Customer)")
+            logger.info(f"      This will trigger RAG verification pipeline")
             # Outbound email processing (sent) with RAG verification
             # Use await since we're now in an async function
             await _process_outbound_email(db, email, from_email, subject, body, thread_context)
+            logger.info(f"   ✅ OUTBOUND EMAIL PROCESSING COMPLETED")
         
         db.commit()
         logger.info(f"Successfully classified and stored email {email_id}")
@@ -62,13 +90,25 @@ async def classify_email(email_id: str, from_email: str, thread_id: str, subject
 
 async def _process_inbound_email(db, email, from_email: str, subject: str, body: str):
     """Process inbound email according to flow.md logic."""
+    # 🔍 DETAILED LOGGING: Inbound processing start
+    logger.info(f"   📥 _PROCESS_INBOUND_EMAIL STARTED")
+    logger.info(f"      Email ID: {email.email_identifier}")
+    logger.info(f"      From: {from_email}")
+    logger.info(f"      Subject: {subject}")
+    logger.info(f"      Body: {body[:200]}{'...' if len(body) > 200 else ''}")
+
     email_text = f"{subject} {body}"
-    
+    logger.info(f"      Combined text length: {len(email_text)} characters")
+
     # Step 1: Spam classification
+    logger.info(f"      🔍 STEP 1: Spam classification")
     spam_result = classify_category(email_text)
     email_type = spam_result.get("category", "query")  # Default to query if classification fails
+    logger.info(f"         Spam result: {spam_result}")
+    logger.info(f"         Email type: {email_type}")
 
     if email_type == "spam":
+        logger.info(f"         ❌ EMAIL CLASSIFIED AS SPAM - Creating spam record")
         # Create analysis record for spam emails too
         inbound_analysis = InboundEmailAnalysis(
             email_id=email.email_identifier,
@@ -80,18 +120,27 @@ async def _process_inbound_email(db, email, from_email: str, subject: str, body:
             created_at=datetime.utcnow()
         )
         db.add(inbound_analysis)
-        logger.info(f"Email {email.email_identifier} classified as spam and stored")
+        db.commit()
+        logger.info(f"         ✅ Spam email {email.email_identifier} stored in inbound_email_analysis")
+        logger.info(f"   📥 _PROCESS_INBOUND_EMAIL COMPLETED (SPAM)")
         return
 
     # Step 2: Priority classification (only for non-spam)
+    logger.info(f"      🔍 STEP 2: Priority classification")
     priority_result = classify_priority(email_text)
     priority = priority_result.get("priority", "medium")  # Default to medium
+    logger.info(f"         Priority result: {priority_result}")
+    logger.info(f"         Priority: {priority}")
 
     # Step 3: Issue classification for category
+    logger.info(f"      🔍 STEP 3: Issue classification")
     issue_result = await classify_issue(email_text)
     category = issue_result if issue_result else "others"  # Use issue classification directly
-    
+    logger.info(f"         Issue result: {issue_result}")
+    logger.info(f"         Category: {category}")
+
     # Create inbound analysis record
+    logger.info(f"      💾 CREATING INBOUND ANALYSIS RECORD")
     inbound_analysis = InboundEmailAnalysis(
         email_id=email.email_identifier,
         from_email=from_email,
@@ -101,9 +150,21 @@ async def _process_inbound_email(db, email, from_email: str, subject: str, body:
         responded=False,
         created_at=datetime.utcnow()
     )
-    
+
     db.add(inbound_analysis)
-    logger.info(f"Inbound email {email.email_identifier} classified as {email_type}, priority: {priority}, category: {category}")
+    db.commit()
+
+    logger.info(f"         ✅ INBOUND ANALYSIS STORED:")
+    logger.info(f"            - email_id: {inbound_analysis.email_id}")
+    logger.info(f"            - from_email: {inbound_analysis.from_email}")
+    logger.info(f"            - type: {inbound_analysis.type}")
+    logger.info(f"            - priority: {inbound_analysis.priority}")
+    logger.info(f"            - category: {inbound_analysis.category}")
+    logger.info(f"            - responded: {inbound_analysis.responded}")
+    logger.info(f"            - created_at: {inbound_analysis.created_at}")
+
+    logger.info(f"   📥 _PROCESS_INBOUND_EMAIL COMPLETED (NON-SPAM)")
+    logger.info(f"      Final classification: {email_type}, priority: {priority}, category: {category}")
 
     # ALERT TRIGGER: Schedule SLA monitoring for non-spam emails
     if email_type != "spam":

@@ -112,6 +112,9 @@ class GmailClient:
 
         message_ids: List[str] = []
         page_token: Optional[str] = None
+
+        print(f"🔍 Fetching Gmail history since: {start_history_id}")
+
         while True:
             req = self.service.users().history().list(
                 userId="me",
@@ -120,17 +123,28 @@ class GmailClient:
                 pageToken=page_token,
             )
             resp = req.execute()
+
+            print(f"   📊 History response: {len(resp.get('history', []))} history entries")
+
             for h in resp.get("history", []):
-                for m in h.get("messagesAdded", []):
+                messages_added = h.get("messagesAdded", [])
+                print(f"      📧 Found {len(messages_added)} messages added in this history entry")
+
+                for m in messages_added:
                     msg = m.get("message") or {}
                     msg_id = msg.get("id")
                     if msg_id:
                         message_ids.append(msg_id)
+                        print(f"         ➕ Added message ID: {msg_id}")
+
             page_token = resp.get("nextPageToken")
             if not page_token:
                 break
 
         # Deduplicate while preserving order
+        print(f"   📊 Total message IDs found: {len(message_ids)}")
+        print(f"   📋 Message IDs: {message_ids}")
+
         seen = set()
         deduped_ids = []
         for mid in message_ids:
@@ -138,15 +152,29 @@ class GmailClient:
                 seen.add(mid)
                 deduped_ids.append(mid)
 
+        print(f"   📊 After deduplication: {len(deduped_ids)} unique messages")
+        print(f"   📋 Deduplicated IDs: {deduped_ids}")
+
         messages: List[Dict[str, Any]] = []
         fetched_threads: Dict[str, Dict[str, Any]] = {}
+
+        print(f"🔍 Attempting to fetch {len(deduped_ids)} messages: {deduped_ids}")
+
         for msg_id in deduped_ids:
-            msg = (
-                self.service.users()
-                .messages()
-                .get(userId="me", id=msg_id, format="metadata", metadataHeaders=["From", "To", "Subject", "Date", "Message-Id"])  # type: ignore[arg-type]
-                .execute()
-            )
+            try:
+                print(f"   📧 Fetching message: {msg_id}")
+                msg = (
+                    self.service.users()
+                    .messages()
+                    .get(userId="me", id=msg_id, format="metadata", metadataHeaders=["From", "To", "Subject", "Date", "Message-Id"])  # type: ignore[arg-type]
+                    .execute()
+                )
+                print(f"   ✅ Successfully fetched message: {msg_id}")
+            except Exception as e:
+                print(f"   ❌ Failed to fetch message {msg_id}: {str(e)}")
+                print(f"      Error type: {type(e).__name__}")
+                # Skip this message and continue with others
+                continue
             headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
             thread_id = msg.get("threadId")
 
