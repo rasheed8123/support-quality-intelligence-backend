@@ -17,7 +17,7 @@ tiktoken==0.5.2
 
 # Vector Database and Embeddings
 qdrant-client==1.7.0
-numpy==1.24.3
+numpy>=1.24.0
 scipy==1.11.4
 
 # Text Processing and NLP

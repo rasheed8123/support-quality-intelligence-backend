@@ -14,7 +14,7 @@ from app.api.models.request_models import SupportVerificationRequest, Verificati
 
 logger = logging.getLogger(__name__)
 
-def classify_email(email_id: str, from_email: str, thread_id: str, subject: str, body: str, is_inbound: bool = True, thread_context: str = None):
+async def classify_email(email_id: str, from_email: str, thread_id: str, subject: str, body: str, is_inbound: bool = True, thread_context: str = None):
     """
     Classify email according to the flow.md logic and write to database.
 
@@ -44,8 +44,8 @@ def classify_email(email_id: str, from_email: str, thread_id: str, subject: str,
             _process_inbound_email(db, email, from_email, subject, body)
         else:
             # Outbound email processing (sent) with RAG verification
-            # Run async function in sync context
-            asyncio.run(_process_outbound_email(db, email, from_email, subject, body, thread_context))
+            # Use await since we're now in an async function
+            await _process_outbound_email(db, email, from_email, subject, body, thread_context)
         
         db.commit()
         logger.info(f"Successfully classified and stored email {email_id}")

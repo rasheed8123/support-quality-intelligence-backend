@@ -69,18 +69,28 @@ class ConnectionManager:
         logger.info("📊 Connecting to MySQL database...")
         
         try:
+            # Get the appropriate database URL
+            database_url = settings.database_url
+
+            # Determine connect_args based on database type
+            connect_args = {}
+            if "mysql" in database_url.lower():
+                connect_args = {
+                    "charset": "utf8mb4",
+                    "autocommit": False,
+                }
+            elif "sqlite" in database_url.lower():
+                connect_args = {"check_same_thread": False}
+
             # Create SQLAlchemy engine with production settings
             self.db_engine = create_engine(
-                settings.DATABASE_URL,
+                database_url,
                 echo=False,  # Set to True for SQL debugging
                 pool_pre_ping=True,  # Verify connections before use
                 pool_recycle=3600,   # Recycle connections every hour
                 pool_size=10,        # Connection pool size
                 max_overflow=20,     # Max overflow connections
-                connect_args={
-                    "charset": "utf8mb4",
-                    "autocommit": False,
-                }
+                connect_args=connect_args
             )
             
             # Test connection

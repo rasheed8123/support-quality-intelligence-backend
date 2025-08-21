@@ -7,8 +7,8 @@ class InboundEmailAnalysis(Base):
     __tablename__ = "inbound_email_analysis"
     
     id = Column(Integer, primary_key=True)
-    email_id = Column(Text, ForeignKey("email.email_identifier", ondelete="CASCADE"))
-    from_email = Column(Text, nullable=False)
+    email_id = Column(String(255), ForeignKey("email.email_identifier", ondelete="CASCADE"))
+    from_email = Column(String(255), nullable=False)
     type = Column(String(20))  # 'spam', 'query', 'information'
     priority = Column(String(20))  # 'high', 'medium', 'low'
     category = Column(Text)
@@ -23,7 +23,7 @@ class OutboundEmailAnalysis(Base):
     __tablename__ = "outbound_email_analysis"
     
     id = Column(Integer, primary_key=True)
-    email_id = Column(Text, ForeignKey("email.email_identifier", ondelete="CASCADE"))
+    email_id = Column(String(255), ForeignKey("email.email_identifier", ondelete="CASCADE"))
     type = Column(String(20))  # 'query', 'information'
     factual_accuracy = Column(Float)
     guideline_compliance = Column(Float)

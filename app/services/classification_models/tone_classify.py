@@ -49,3 +49,4 @@ def classify_issue(email_text):
     except Exception as e:
         print(f"Error in issue classification: {e}")
         return "general information"
+

@@ -91,6 +91,20 @@ class Settings(BaseSettings):
         env_file = ".env"
         extra = "allow"  # Allow extra fields from .env
 
+    @property
+    def database_url(self) -> str:
+        """
+        Get the appropriate database URL based on configuration.
+        Uses MySQL if configured, otherwise falls back to SQLite.
+        """
+        # Check if MySQL is configured
+        if (self.DB_HOST and self.DB_USER and self.DB_PASSWORD and self.DB_NAME):
+            # Use MySQL configuration
+            return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:3306/{self.DB_NAME}"
+        else:
+            # Fall back to SQLite
+            return self.DATABASE_URL
+
     def get_service_account_info(self) -> dict:
         """Build Google service account info from environment variables"""
         if not self.GOOGLE_SERVICE_ACCOUNT_PROJECT_ID:

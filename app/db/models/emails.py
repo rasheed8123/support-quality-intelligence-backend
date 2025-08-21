@@ -7,9 +7,9 @@ class Email(Base):
     __tablename__ = "email"
     
     id = Column(Integer, primary_key=True)
-    email_identifier = Column(Text, nullable=False)
+    email_identifier = Column(String(255), nullable=False, unique=True, index=True)  # Added index for MySQL FK compatibility
     is_inbound = Column(Boolean, nullable=False)
-    thread_id = Column(Text, nullable=False)
+    thread_id = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships

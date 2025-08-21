@@ -11,7 +11,7 @@ from app.webhook.router import router as webhook_router
 from app.api.endpoints import verification_router, health_router
 
 # Import existing route modules
-from app.routes import classification, email
+from app.routes import classification, email, reports
 
 # Configure logging
 logging.basicConfig(
@@ -79,6 +79,7 @@ app.include_router(webhook_router)
 # Existing application routers
 app.include_router(classification.router)
 app.include_router(email.router)
+app.include_router(reports.router)
 
 # Simple health endpoint for basic checks
 @app.get("/health", tags=["Health"])
@@ -106,6 +107,7 @@ async def root():
             "rag_verification": "/api/v1/verify-support-response",
             "classification": "/classification",
             "email": "/email",
-            "webhooks": "/webhook"
+            "webhooks": "/webhook",
+            "reports": "/reports"
         }
     }

@@ -174,13 +174,21 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
                 thread_context = "\n".join(thread_messages)
                 logger.info(f"Built thread context with {len(sorted_messages)} chronologically sorted messages")
 
-            # Determine if it's sent or received based on labels
-            label_ids = message.get("labelIds", [])
-            # If SENT label is present, it's an outbound email, otherwise it's inbound
-            is_inbound = "SENT" not in label_ids
+            # Determine if it's sent or received based on from_email address
+            # If from_email contains the support account email, it's outbound (sent by support)
+            # Otherwise, it's inbound (received from customer)
+            support_email = "alhassan069@gmail.com"
+            is_inbound = support_email not in from_email.lower()
 
-            # Call classify_email function with thread context
-            classify_email(
+            # Also check labels as backup method
+            label_ids = message.get("labelIds", [])
+            has_sent_label = "SENT" in label_ids
+
+            # Log for debugging
+            logger.info(f"Email from: {from_email}, Support email check: {support_email not in from_email.lower()}, SENT label: {has_sent_label}, Final is_inbound: {is_inbound}")
+
+            # Call classify_email function with thread context (now async)
+            await classify_email(
                 email_id=email_id,
                 from_email=from_email,
                 thread_id=thread_id,

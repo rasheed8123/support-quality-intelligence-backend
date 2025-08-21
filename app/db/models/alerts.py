@@ -8,7 +8,7 @@ class Alert(Base):
     
     id = Column(Integer, primary_key=True)
     type = Column(String(50))  # 'sla_breach', 'high_priority_pending', 'incorrect_fact', 'negative_tone'
-    email_id = Column(Text, ForeignKey("email.email_identifier", ondelete="CASCADE"))
+    email_id = Column(String(255), ForeignKey("email.email_identifier", ondelete="CASCADE"))
     description = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     
