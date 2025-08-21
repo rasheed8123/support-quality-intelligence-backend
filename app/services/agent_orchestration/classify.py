@@ -41,7 +41,7 @@ async def classify_email(email_id: str, from_email: str, thread_id: str, subject
         
         if is_inbound:
             # Inbound email processing (inbox)
-            _process_inbound_email(db, email, from_email, subject, body)
+            await _process_inbound_email(db, email, from_email, subject, body)
         else:
             # Outbound email processing (sent) with RAG verification
             # Use await since we're now in an async function
@@ -57,25 +57,25 @@ async def classify_email(email_id: str, from_email: str, thread_id: str, subject
     finally:
         db.close()
 
-def _process_inbound_email(db, email, from_email: str, subject: str, body: str):
+async def _process_inbound_email(db, email, from_email: str, subject: str, body: str):
     """Process inbound email according to flow.md logic."""
     email_text = f"{subject} {body}"
     
     # Step 1: Spam classification
     spam_result = classify_category(email_text)
     email_type = spam_result.get("category", "query")  # Default to query if classification fails
-    
+
     if email_type == "spam":
         # End processing for spam
         logger.info(f"Email {email.email_identifier} classified as spam")
         return
-    
+
     # Step 2: Priority classification (only for non-spam)
     priority_result = classify_priority(email_text)
     priority = priority_result.get("priority", "medium")  # Default to medium
-    
+
     # Step 3: Issue classification for category
-    issue_result = classify_issue(email_text)
+    issue_result = await classify_issue(email_text)
     category = issue_result if issue_result else "others"  # Use issue classification directly
     
     # Create inbound analysis record
