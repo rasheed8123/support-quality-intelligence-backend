@@ -268,7 +268,15 @@ class ComplianceChecker:
             )
             
             import json
-            violations_data = json.loads(response.choices[0].message.content)
+            try:
+                content = response.choices[0].message.content.strip()
+                if not content:
+                    violations_data = []
+                else:
+                    violations_data = json.loads(content)
+            except (json.JSONDecodeError, AttributeError) as e:
+                logger.error(f"Failed to parse policy violations JSON: {str(e)}")
+                violations_data = []
             
             for violation_data in violations_data:
                 violations.append(ComplianceViolation(
@@ -335,7 +343,15 @@ class ComplianceChecker:
             )
             
             import json
-            violations_data = json.loads(response.choices[0].message.content)
+            try:
+                content = response.choices[0].message.content.strip()
+                if not content:
+                    violations_data = []
+                else:
+                    violations_data = json.loads(content)
+            except (json.JSONDecodeError, AttributeError) as e:
+                logger.error(f"Failed to parse communication violations JSON: {str(e)}")
+                violations_data = []
             
             for violation_data in violations_data:
                 violations.append(ComplianceViolation(
@@ -403,7 +419,15 @@ class ComplianceChecker:
             )
             
             import json
-            violations_data = json.loads(response.choices[0].message.content)
+            try:
+                content = response.choices[0].message.content.strip()
+                if not content:
+                    violations_data = []
+                else:
+                    violations_data = json.loads(content)
+            except (json.JSONDecodeError, AttributeError) as e:
+                logger.error(f"Failed to parse completeness violations JSON: {str(e)}")
+                violations_data = []
             
             for violation_data in violations_data:
                 violations.append(ComplianceViolation(

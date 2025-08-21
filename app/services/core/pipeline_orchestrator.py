@@ -314,7 +314,11 @@ class PipelineOrchestrator:
             return GuidelineCompliance(
                 overall_score=0.5,
                 violations=[],
-                recommendations=["Unable to perform compliance check"],
+                recommendations=[{
+                    "category": "system",
+                    "description": "Unable to perform compliance check",
+                    "priority": "low"
+                }],
                 compliant_aspects=["Basic response structure"],
                 guidelines_checked=0
             )
@@ -419,20 +423,20 @@ class PipelineOrchestrator:
                 overall_score=compliance.overall_score,
                 violations=[
                     ComplianceViolation(
-                        rule_type=v.get("type", "unknown"),
-                        severity=v.get("severity", "minor"),
-                        description=v.get("description", ""),
+                        rule_type=v.get("type", "unknown") if isinstance(v, dict) else "unknown",
+                        severity=v.get("severity", "minor") if isinstance(v, dict) else "minor",
+                        description=v.get("description", "") if isinstance(v, dict) else str(v),
                         violated_text="",
                         guideline_reference="",
-                        suggested_correction=v.get("suggestion", ""),
+                        suggested_correction=v.get("suggestion", "") if isinstance(v, dict) else "",
                         confidence=0.8
                     ) for v in compliance.violations
                 ],
                 recommendations=[
                     ComplianceRecommendation(
-                        category=r.get("category", "general"),
-                        description=r.get("description", ""),
-                        priority=r.get("priority", "medium"),
+                        category=r.get("category", "general") if isinstance(r, dict) else "general",
+                        description=r.get("description", "") if isinstance(r, dict) else str(r),
+                        priority=r.get("priority", "medium") if isinstance(r, dict) else "medium",
                         implementation=""
                     ) for r in compliance.recommendations
                 ],

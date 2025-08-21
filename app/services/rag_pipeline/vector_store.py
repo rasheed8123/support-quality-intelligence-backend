@@ -366,10 +366,8 @@ class AdvancedVectorStoreManager:
             for collection_name in collections:
                 try:
                     # Prepare search parameters
-                    qdrant_search_params = SearchParams(
-                        hnsw_ef=search_params.ef or self.collections[collection_name].index_config["ef"],
-                        exact=search_params.exact
-                    )
+                    # Note: Use None for default search params in newer Qdrant versions
+                    qdrant_search_params = None
 
                     # Prepare filters
                     qdrant_filter = self._prepare_filter(filters) if filters else None
