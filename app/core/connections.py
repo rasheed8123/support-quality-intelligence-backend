@@ -246,11 +246,29 @@ async def lifespan_manager(app):
     # Startup
     logger.info("🚀 Application starting up...")
     await connection_manager.initialize_connections()
-    
+
+    # Start daily report scheduler (temporarily disabled)
+    # try:
+    #     from app.services.scheduler.daily_scheduler import start_daily_scheduler
+    #     await start_daily_scheduler()
+    #     logger.info("📅 Daily report scheduler started successfully")
+    # except Exception as e:
+    #     logger.error(f"❌ Failed to start daily scheduler: {str(e)}")
+    #     # Don't fail startup if scheduler fails
+
     yield
-    
+
     # Shutdown
     logger.info("🛑 Application shutting down...")
+
+    # Stop daily report scheduler (temporarily disabled)
+    # try:
+    #     from app.services.scheduler.daily_scheduler import stop_daily_scheduler
+    #     await stop_daily_scheduler()
+    #     logger.info("📅 Daily report scheduler stopped successfully")
+    # except Exception as e:
+    #     logger.error(f"❌ Failed to stop daily scheduler: {str(e)}")
+
     await connection_manager.close_connections()
 
 
