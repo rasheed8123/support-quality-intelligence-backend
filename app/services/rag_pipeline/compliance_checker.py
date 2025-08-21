@@ -183,7 +183,17 @@ class ComplianceChecker:
             try:
                 # Use advanced retrieval to find relevant guidelines
                 results = await self.retrieval_engine.retrieve_evidence_for_claims(
-                    claims=[Claim(text=query, confidence=1.0, category="guideline_search")],
+                    claims=[Claim(
+                        text=query,
+                        claim_type="policy_statement",
+                        verification_priority="medium",
+                        expected_evidence_type="policy_document",
+                        specificity_level="general",
+                        context_start=0,
+                        context_end=len(query),
+                        entities=[],
+                        confidence=1.0
+                    )],
                     max_evidence_per_claim=5
                 )
                 

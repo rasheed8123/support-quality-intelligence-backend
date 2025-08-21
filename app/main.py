@@ -13,6 +13,10 @@ from app.api.endpoints import verification_router, health_router
 # Import existing route modules
 from app.routes import classification, email, reports
 
+# Import alert system
+from app.api.alert_routes import router as alert_router
+from app.services.alerts.alert_scheduler import alert_scheduler
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -80,6 +84,9 @@ app.include_router(webhook_router)
 app.include_router(classification.router)
 app.include_router(email.router)
 app.include_router(reports.router)
+
+# Alert system router
+app.include_router(alert_router)
 
 # Simple health endpoint for basic checks
 @app.get("/health", tags=["Health"])

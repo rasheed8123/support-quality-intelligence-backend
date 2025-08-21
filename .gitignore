@@ -49,6 +49,11 @@ state.json
 .pytest_cache/
 .coverage
 htmlcov/
+test_*.py
+*_test.py
+tests/temp/
+tests/output/
+tests/logs/
 
 # Build artifacts
 dist/
@@ -59,3 +64,24 @@ build/
 
 .cline/
 .cursor/
+
+# Documentation files (except README.md)
+*.md
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+!LICENSE.md
+
+# Temporary files and scripts
+temp/
+tmp/
+scratch/
+debug/
+*.tmp
+*.temp
+
+# Analysis and report files
+*_ANALYSIS.md
+*_ISSUES.md
+*_REPORT.md
+*_SUMMARY.md

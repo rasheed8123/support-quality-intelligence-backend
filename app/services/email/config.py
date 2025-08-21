@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 # Load variables from .env if present
 load_dotenv()
 
-
 class Settings(BaseModel):
     google_credentials_path: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "app/env/confidential.json")
     gmail_impersonate_email: Optional[str] = os.getenv("GMAIL_IMPERSONATE_EMAIL")

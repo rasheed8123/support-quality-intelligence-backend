@@ -299,11 +299,10 @@ class PipelineOrchestrator:
                     "description": v.description,
                     "suggestion": v.suggested_correction
                 } for v in compliance_result.violations],
-                recommendations=[{
-                    "category": r.category,
-                    "description": r.description,
-                    "priority": r.priority
-                } for r in compliance_result.recommendations],
+                recommendations=[
+                    f"{r.category}: {r.description} (Priority: {r.priority})"
+                    for r in compliance_result.recommendations
+                ],
                 compliant_aspects=compliance_result.compliant_aspects,
                 guidelines_checked=compliance_result.guidelines_checked
             )
@@ -314,11 +313,9 @@ class PipelineOrchestrator:
             return GuidelineCompliance(
                 overall_score=0.5,
                 violations=[],
-                recommendations=[{
-                    "category": "system",
-                    "description": "Unable to perform compliance check",
-                    "priority": "low"
-                }],
+                recommendations=[
+                    "system: Unable to perform compliance check (Priority: low)"
+                ],
                 compliant_aspects=["Basic response structure"],
                 guidelines_checked=0
             )

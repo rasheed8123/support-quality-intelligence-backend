@@ -12,6 +12,9 @@ from typing import Tuple, Optional
 from app.services.core.pipeline_orchestrator import PipelineOrchestrator
 from app.api.models.request_models import SupportVerificationRequest, VerificationLevel
 
+# Import Alert components
+from app.services.alerts.alert_service import AlertService, AlertConfiguration
+
 logger = logging.getLogger(__name__)
 
 async def classify_email(email_id: str, from_email: str, thread_id: str, subject: str, body: str, is_inbound: bool = True, thread_context: str = None):
@@ -66,8 +69,18 @@ async def _process_inbound_email(db, email, from_email: str, subject: str, body:
     email_type = spam_result.get("category", "query")  # Default to query if classification fails
 
     if email_type == "spam":
-        # End processing for spam
-        logger.info(f"Email {email.email_identifier} classified as spam")
+        # Create analysis record for spam emails too
+        inbound_analysis = InboundEmailAnalysis(
+            email_id=email.email_identifier,
+            from_email=from_email,
+            type=email_type,  # "spam"
+            priority="low",   # Default priority for spam
+            category="spam",  # Default category for spam
+            responded=False,
+            created_at=datetime.utcnow()
+        )
+        db.add(inbound_analysis)
+        logger.info(f"Email {email.email_identifier} classified as spam and stored")
         return
 
     # Step 2: Priority classification (only for non-spam)
@@ -91,6 +104,27 @@ async def _process_inbound_email(db, email, from_email: str, subject: str, body:
     
     db.add(inbound_analysis)
     logger.info(f"Inbound email {email.email_identifier} classified as {email_type}, priority: {priority}, category: {category}")
+
+    # ALERT TRIGGER: Schedule SLA monitoring for non-spam emails
+    if email_type != "spam":
+        try:
+            # Determine SLA threshold based on priority
+            if "high" in priority.lower():
+                threshold_hours = AlertConfiguration.SLA_THRESHOLDS["high_priority"]
+                priority_level = "high"
+            elif "medium" in priority.lower():
+                threshold_hours = AlertConfiguration.SLA_THRESHOLDS["medium_priority"]
+                priority_level = "medium"
+            else:
+                threshold_hours = AlertConfiguration.SLA_THRESHOLDS["low_priority"]
+                priority_level = "low"
+
+            # Note: In a production system, you'd schedule this with a job queue
+            # For now, we'll rely on the background scheduler to check SLA breaches
+            logger.info(f"SLA monitoring scheduled for {priority_level} priority email {email.email_identifier} (threshold: {threshold_hours}h)")
+
+        except Exception as e:
+            logger.error(f"Failed to schedule SLA monitoring for email {email.email_identifier}: {e}")
 
 
 
@@ -205,12 +239,12 @@ async def _extract_thread_context(thread_context: str, subject: str, body: str) 
         return subject or "General inquiry", ""
 
 
-def _parse_email_thread_chronologically(thread_context: str) -> list:
+def _parse_email_thread_chronologically(thread_context) -> list:
     """
     Parse email thread text into individual email messages sorted chronologically.
 
     Args:
-        thread_context: Raw thread text with chronological message data
+        thread_context: Raw thread text with chronological message data (string or list)
 
     Returns:
         List of email dictionaries sorted chronologically (oldest first)
@@ -218,6 +252,35 @@ def _parse_email_thread_chronologically(thread_context: str) -> list:
     emails = []
 
     try:
+        # Handle different input types
+        if thread_context is None:
+            return emails
+
+        if isinstance(thread_context, list):
+            # If it's already a list, convert to expected format
+            if not thread_context:
+                return emails
+
+            # Convert list of dicts to string format
+            if isinstance(thread_context[0], dict):
+                # List of email dicts
+                for i, email_dict in enumerate(thread_context):
+                    emails.append({
+                        'body': email_dict.get('body', ''),
+                        'sender': email_dict.get('from', ''),
+                        'subject': email_dict.get('subject', ''),
+                        'date': email_dict.get('date', ''),
+                        'order': i
+                    })
+                return emails
+            else:
+                # List of strings, join them
+                thread_context = "\n---\n".join(str(item) for item in thread_context)
+
+        if not isinstance(thread_context, str):
+            # Convert to string if it's not already
+            thread_context = str(thread_context)
+
         # Split thread context by message separators
         message_blocks = thread_context.split("---\n")
 
@@ -536,6 +599,40 @@ async def _store_outbound_analysis(db, email, rag_results: dict, from_email: str
                    f"Accuracy: {outbound_analysis.factual_accuracy:.2f}, "
                    f"Compliance: {outbound_analysis.guideline_compliance:.2f}, "
                    f"Completeness: {outbound_analysis.completeness:.2f}")
+
+        # ALERT TRIGGERS: Check for quality issues in outbound responses
+        try:
+            # ALERT TRIGGER 1: Factual Accuracy Check
+            if (outbound_analysis.factual_accuracy is not None and
+                outbound_analysis.factual_accuracy < AlertConfiguration.QUALITY_THRESHOLDS["factual_accuracy_min"]):
+
+                await AlertService.create_immediate_alert(
+                    alert_type="factual_error",
+                    email_id=email.email_identifier,
+                    description=f"Factual accuracy score {outbound_analysis.factual_accuracy:.2f} below threshold {AlertConfiguration.QUALITY_THRESHOLDS['factual_accuracy_min']}",
+                    current_value=outbound_analysis.factual_accuracy,
+                    threshold_value=AlertConfiguration.QUALITY_THRESHOLDS["factual_accuracy_min"],
+                    send_notification=False  # Disable email notifications
+                )
+                logger.warning(f"Factual error alert created for email {email.email_identifier}")
+
+            # ALERT TRIGGER 2: Negative Sentiment Check
+            if tone in ["poor", "negative", "unprofessional"]:
+                # Convert tone to numeric score for threshold comparison
+                tone_score = 0.3 if tone == "poor" else 0.4
+
+                await AlertService.create_immediate_alert(
+                    alert_type="negative_sentiment",
+                    email_id=email.email_identifier,
+                    description=f"Negative sentiment detected in response (tone: {tone})",
+                    current_value=tone_score,
+                    threshold_value=AlertConfiguration.QUALITY_THRESHOLDS["sentiment_score_min"],
+                    send_notification=False  # Disable email notifications
+                )
+                logger.warning(f"Negative sentiment alert created for email {email.email_identifier}")
+
+        except Exception as alert_error:
+            logger.error(f"Failed to create quality alerts for email {email.email_identifier}: {alert_error}")
 
     except Exception as e:
         logger.error(f"Error storing outbound analysis for {email.email_identifier}: {str(e)}")

@@ -256,6 +256,15 @@ async def lifespan_manager(app):
     #     logger.error(f"❌ Failed to start daily scheduler: {str(e)}")
     #     # Don't fail startup if scheduler fails
 
+    # Start alert scheduler
+    try:
+        from app.services.alerts.alert_scheduler import alert_scheduler
+        await alert_scheduler.start()
+        logger.info("🚨 Alert scheduler started successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to start alert scheduler: {str(e)}")
+        # Don't fail startup if scheduler fails
+
     yield
 
     # Shutdown
@@ -268,6 +277,14 @@ async def lifespan_manager(app):
     #     logger.info("📅 Daily report scheduler stopped successfully")
     # except Exception as e:
     #     logger.error(f"❌ Failed to stop daily scheduler: {str(e)}")
+
+    # Stop alert scheduler
+    try:
+        from app.services.alerts.alert_scheduler import alert_scheduler
+        await alert_scheduler.stop()
+        logger.info("🚨 Alert scheduler stopped successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to stop alert scheduler: {str(e)}")
 
     await connection_manager.close_connections()
 
