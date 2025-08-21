@@ -392,12 +392,12 @@ async def _run_rag_verification(
         verification_request = SupportVerificationRequest(
             support_response=support_response,
             customer_query=customer_query,
-            verification_level=VerificationLevel.COMPREHENSIVE,
+            verification_level=VerificationLevel.STANDARD,  # Use STANDARD for email verification
             include_suggestions=True,
             agent_id=f"email_agent_{email_id}",
             ticket_id=email_id,
             subject_areas=_extract_subject_areas(customer_query, support_response),
-            min_accuracy_score=0.7,  # Lower threshold for email verification
+            min_accuracy_score=0.7,  # Appropriate threshold for STANDARD verification
             require_source_citation=True
         )
 
@@ -462,24 +462,28 @@ async def _run_rag_verification(
 def _extract_subject_areas(customer_query: str, support_response: str) -> list:
     """
     Extract relevant subject areas from customer query and response.
+    Only returns valid subject areas as defined in the Pydantic model.
 
     Args:
         customer_query: Customer's question
         support_response: Agent's response
 
     Returns:
-        List of relevant subject areas
+        List of relevant subject areas (only valid ones)
     """
-    # Define subject area keywords
+    # Define subject area keywords - ONLY VALID AREAS
+    # Valid areas: data_science, web_development, placement_assistance, fees,
+    # assessment, certification, instructors, support_guidelines, course_catalog, general
     subject_keywords = {
         'data_science': ['data science', 'machine learning', 'ml', 'ai', 'analytics', 'python', 'statistics'],
+        'web_development': ['web development', 'html', 'css', 'javascript', 'react', 'node', 'frontend', 'backend'],
         'placement_assistance': ['placement', 'job', 'career', 'interview', 'resume', 'hiring', 'employment'],
         'fees': ['fee', 'cost', 'price', 'payment', 'installment', 'scholarship', 'discount', 'refund'],
-        'course_content': ['curriculum', 'syllabus', 'module', 'chapter', 'content', 'topics', 'subjects'],
+        'assessment': ['test', 'exam', 'quiz', 'assessment', 'evaluation', 'grade', 'score'],
         'certification': ['certificate', 'certification', 'credential', 'diploma', 'degree'],
-        'admission': ['admission', 'enrollment', 'registration', 'eligibility', 'prerequisite'],
-        'technical_support': ['access', 'login', 'password', 'platform', 'technical', 'support', 'help'],
-        'schedule': ['schedule', 'timing', 'duration', 'batch', 'class', 'session', 'weekend']
+        'instructors': ['instructor', 'teacher', 'mentor', 'faculty', 'trainer'],
+        'support_guidelines': ['policy', 'guideline', 'rule', 'procedure', 'process', 'support'],
+        'course_catalog': ['course', 'curriculum', 'syllabus', 'module', 'chapter', 'content', 'topics', 'catalog']
     }
 
     # Combine query and response for analysis
