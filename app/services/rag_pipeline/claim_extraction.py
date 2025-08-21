@@ -194,6 +194,11 @@ Return valid JSON with a "claims" array containing claim objects."""
                 if claim_type not in valid_types:
                     claim_type = "factual_data"
                 
+                # Ensure entities are strings
+                entities = claim_data.get("entities", [])
+                if entities:
+                    entities = [str(entity) for entity in entities]
+
                 # Create claim object
                 claim = Claim(
                     text=claim_text,
@@ -203,7 +208,7 @@ Return valid JSON with a "claims" array containing claim objects."""
                     specificity_level=claim_data.get("specificity_level", "general"),
                     context_start=context_start,
                     context_end=context_end,
-                    entities=claim_data.get("entities", []),
+                    entities=entities,
                     confidence=float(claim_data.get("confidence", 0.8))
                 )
                 

@@ -332,15 +332,22 @@ class EvidenceRetriever:
             # Boost score for high-priority claims
             if claim.verification_priority == "high":
                 chunk.relevance_score *= 1.2
-            
+
             # Boost score for specific claims
             if claim.specificity_level == "specific":
                 chunk.relevance_score *= 1.1
-            
+
             # Boost score for matching document types
             if self._is_document_type_relevant(chunk.document_type, claim.claim_type):
                 chunk.relevance_score *= 1.3
-        
+
+        # Normalize scores to ensure they don't exceed 1.0
+        if chunks:
+            max_score = max(chunk.relevance_score for chunk in chunks)
+            if max_score > 1.0:
+                for chunk in chunks:
+                    chunk.relevance_score = min(chunk.relevance_score / max_score, 1.0)
+
         # Sort by relevance score
         return sorted(chunks, key=lambda x: x.relevance_score, reverse=True)
     

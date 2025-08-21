@@ -11,7 +11,7 @@ from app.webhook.router import router as webhook_router
 from app.api.endpoints import verification_router, health_router
 
 # Import existing route modules
-from app.routes import classification, email, reports
+from app.routes import classification, email, reports, dashboard
 
 # Import alert system
 from app.api.alert_routes import router as alert_router
@@ -84,6 +84,7 @@ app.include_router(webhook_router)
 app.include_router(classification.router)
 app.include_router(email.router)
 app.include_router(reports.router)
+app.include_router(dashboard.router)
 
 # Alert system router
 app.include_router(alert_router)
