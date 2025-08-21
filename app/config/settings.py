@@ -10,6 +10,13 @@ class Settings(BaseSettings):
     # Database settings
     DATABASE_URL: str = "sqlite:///./sql_app.db"
 
+    # MySQL Database Configuration (Production)
+    DB_HOST: Optional[str] = None
+    DB_USER: Optional[str] = None
+    DB_PASSWORD: Optional[str] = None
+    DB_NAME: Optional[str] = None
+    DB_DIALECT: str = "sqlite"
+
     # API Configuration
     API_VERSION: str = "v1"
     API_TITLE: str = "Support Quality Intelligence API"
@@ -54,6 +61,7 @@ class Settings(BaseSettings):
     VECTOR_STORE_HOST: str = "localhost"
     VECTOR_STORE_PORT: int = 6333
     VECTOR_STORE_API_KEY: Optional[str] = None
+    VECTOR_STORE_USE_HTTPS: bool = True  # For Qdrant Cloud
     EMBEDDING_DIMENSIONS: int = 3072
     MAX_CHUNK_SIZE: int = 1000
     CHUNK_OVERLAP: int = 100

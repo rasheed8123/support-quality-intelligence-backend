@@ -189,6 +189,7 @@ async def pubsub_push(envelope: PubSubPushMessage, request: Request):
                 is_inbound=is_inbound,
                 thread_context=thread_context
             )
+
             
             processed_count += 1
             logger.info(f"Successfully processed email {email_id} (inbound: {is_inbound}, subject: {subject[:50]}...)")
